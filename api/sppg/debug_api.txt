@@ -1,0 +1,10 @@
+TIME: 21:29:13 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d","sekolah_id":"ef8db53c-7e13-4a4a-8911-e5ad1f0cae93"}
+TIME: 21:29:40 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d"}
+TIME: 21:29:42 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d","sekolah_id":"ef8db53c-7e13-4a4a-8911-e5ad1f0cae93"}
+TIME: 21:29:43 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d","sekolah_id":"ef8db53c-7e13-4a4a-8911-e5ad1f0cae93"}
+TIME: 21:30:16 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d","sekolah_id":"ef8db53c-7e13-4a4a-8911-e5ad1f0cae93"}
+TIME: 21:32:14 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d","sekolah_id":"ef8db53c-7e13-4a4a-8911-e5ad1f0cae93"}
+TIME: 21:32:15 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d","sekolah_id":"ef8db53c-7e13-4a4a-8911-e5ad1f0cae93"}
+TIME: 21:32:45 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d"}
+TIME: 21:32:47 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d","sekolah_id":"fd56739b-79b0-4db3-a2a8-23ac041543fe"}
+TIME: 21:33:10 | GET: {"sppg_id":"0cc7a718-47bc-11f1-a8a4-a841f418775d","sekolah_id":"ef8db53c-7e13-4a4a-8911-e5ad1f0cae93"}

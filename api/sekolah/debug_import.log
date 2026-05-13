@@ -1,0 +1,94 @@
+POST Data: Array
+(
+)
+
+FILES Data: Array
+(
+)
+
+POST Data: Array
+(
+)
+
+FILES Data: Array
+(
+)
+
+POST Data: Array
+(
+)
+
+FILES Data: Array
+(
+)
+
+POST Data: Array
+(
+    [sekolah_id] => 138bb762-cbca-4379-b55a-a2a11ddd7d64
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => data_siswa.csv
+            [full_path] => data_siswa.csv
+            [type] => text/csv
+            [tmp_name] => C:\xampp\tmp\phpED76.tmp
+            [error] => 0
+            [size] => 252
+        )
+
+)
+
+Starting import for data_siswa.csv at 2026-04-20 07:54:45
+First line: ;;;;;;;
+
+POST Data: Array
+(
+    [sekolah_id] => 138bb762-cbca-4379-b55a-a2a11ddd7d64
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => data_siswa.csv
+            [full_path] => data_siswa.csv
+            [type] => text/csv
+            [tmp_name] => C:\xampp\tmp\php3366.tmp
+            [error] => 0
+            [size] => 361
+        )
+
+)
+
+Starting import for data_siswa.csv at 2026-04-20 10:01:45
+First line: ;;;;;;;
+
+Duplicate: NIS
+Duplicate: 2026001
+Duplicate: 2026002
+Duplicate: 2026003
+POST Data: Array
+(
+    [sekolah_id] => ef8db53c-7e13-4a4a-8911-e5ad1f0cae93
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => data_siswa.csv
+            [full_path] => data_siswa.csv
+            [type] => text/csv
+            [tmp_name] => C:\xampp\tmp\phpA017.tmp
+            [error] => 0
+            [size] => 352
+        )
+
+)
+
+Starting import for data_siswa.csv at 2026-05-12 21:36:48
+First line: NIS;Nama Lengkap;Kelas;Jenis Kelamin;Tanggal Lahir;Nama Wali;No Telp Wali;
+
