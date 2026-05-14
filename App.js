@@ -35,6 +35,10 @@ import MenuDetailScreen from './src/screen/main/shared/MenuDetailScreen';
 import KantinApprovalScreen from './src/screen/main/admin_sekolah/KantinApprovalScreen';
 import RegisterScreen from './src/screen/auth/RegisterScreen';
 import RegisterGuruScreen from './src/screen/auth/RegisterGuruScreen';
+import HomeScreenKantin from './src/screen/main/kantin/HomeScreenKantin';
+import ScannerKantinScreen from './src/screen/main/kantin/ScannerKantinScreen';
+import LaporanKantinScreen from './src/screen/main/kantin/LaporanKantinScreen';
+import FeedbackScreen from './src/screen/main/siswa/FeedbackScreen';
 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -195,6 +199,26 @@ export default function App() {
           <Stack.Screen
             name="RegisterGuruScreen"
             component={RegisterGuruScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="HomeKantin"
+            component={HomeScreenKantin}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ScannerKantin"
+            component={ScannerKantinScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="LaporanKantin"
+            component={LaporanKantinScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Feedback"
+            component={FeedbackScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

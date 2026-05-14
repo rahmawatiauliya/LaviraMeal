@@ -53,6 +53,8 @@ export default function LoginScreen({ navigation }) {
                     navigation.replace('HomeSiswa');
                 } else if (userRole === 'guru') {
                     navigation.replace('HomeGuru');
+                } else if (userRole === 'kantin') {
+                    navigation.replace('HomeKantin');
                 } else {
                     navigation.replace('Home');
                 }

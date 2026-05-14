@@ -4,11 +4,10 @@ import { Platform } from 'react-native';
 // Konfigurasi URL API
 // Gunakan IP laptop (10.61.4.10) agar bisa diakses dari device fisik maupun emulator
 const DEV_BASE_URL = Platform.select({
-    android: 'http://10.15.1.200/project_lavirameal/api/',
-    ios: 'http://10.15.1.200/project_lavirameal/api/',
-    default: 'http://10.15.1.200/project_lavirameal/api/',
+    android: 'http://10.60.4.15/project_lavirameal/api/',
+    ios: 'http://10.60.4.15/project_lavirameal/api/',
+    default: 'http://10.60.4.15/project_lavirameal/api/',
 });
-
 // NOTE: Pastikan laptop dan HP berada dalam jaringan WiFi yang sama jika menggunakan device fisik.
 
 

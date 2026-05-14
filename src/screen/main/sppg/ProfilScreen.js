@@ -98,7 +98,7 @@ export default function ProfilScreen({ navigation }) {
   const handleLogout = () => {
     Alert.alert(
       "Konfirmasi Keluar",
-      "Apakah Anda yakin ingin mengakhiri sesi administratif ini?",
+      "Apakah Anda yakin ingin mengakhiri sesi ini?",
       [
         { text: "Batal", style: "cancel" },
         { 
@@ -252,7 +252,11 @@ export default function ProfilScreen({ navigation }) {
               <View style={styles.idCardHeader}>
                  <View>
                     <Text style={styles.idLembaga}>{userData.displayLembaga}</Text>
-                    <Text style={styles.idSystem}>LaviraMeal Authority System</Text>
+                    <Text style={styles.idSystem}>
+                      {userData.role === 'kantin' ? 'LaviraMeal Merchant Partner' : 
+                       userData.role === 'siswa' ? 'LaviraMeal Student Card' : 
+                       'LaviraMeal Authority System'}
+                    </Text>
                  </View>
                  <MaterialCommunityIcons name="integrated-circuit-chip" size={36} color={ACCENT_YELLOW} />
               </View>
@@ -261,8 +265,12 @@ export default function ProfilScreen({ navigation }) {
 
               <View style={styles.idDetails}>
                  <View style={styles.idField}>
-                    <Text style={styles.idLabel}>NOMOR INDUK PEGAWAI</Text>
-                    <Text style={styles.idValue}>{userData.nip || 'SPPG-ADMIN-001'}</Text>
+                    <Text style={styles.idLabel}>
+                      {userData.role === 'kantin' ? 'KODE IDENTITAS KANTIN' : 
+                       userData.role === 'siswa' ? 'NOMOR INDUK SISWA (NIS)' : 
+                       'NOMOR INDUK PEGAWAI (NIP)'}
+                    </Text>
+                    <Text style={styles.idValue}>{userData.username || userData.nip || 'N/A'}</Text>
                  </View>
                  <View style={styles.idField}>
                     <Text style={styles.idLabel}>JABATAN STRUKTUR</Text>
@@ -454,15 +462,17 @@ export default function ProfilScreen({ navigation }) {
 
       {/* BOTTOM NAV RE-IMPLEMENTED FOR CONSISTENCY */}
       <View style={styles.bottomNav}>
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(userData.role === 'sppg' ? 'Home' : userData.role === 'sekolah' ? 'HomeSekolah' : 'HomeSiswa')}>
+         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(userData.role === 'sppg' ? 'Home' : userData.role === 'sekolah' ? 'HomeSekolah' : userData.role === 'kantin' ? 'HomeKantin' : 'HomeSiswa')}>
             <Ionicons name="home-outline" size={24} color={TEXT_MUTED} />
             <Text style={styles.navLabelText}>Beranda</Text>
          </TouchableOpacity>
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(userData.role === 'sppg' ? 'Sekolah' : 'ManajemenKelas')}>
-            <Ionicons name={userData.role === 'sppg' ? "business-outline" : "layers-outline"} size={24} color={TEXT_MUTED} />
-            <Text style={styles.navLabelText}>{userData.role === 'sppg' ? 'Sekolah' : 'Kelas'}</Text>
-         </TouchableOpacity>
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(userData.role === 'sppg' ? 'Laporan' : 'LaporanSekolah')}>
+         {(userData.role !== 'kantin' && userData.role !== 'siswa') && (
+           <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(userData.role === 'sppg' ? 'Sekolah' : 'ManajemenKelas')}>
+              <Ionicons name={userData.role === 'sppg' ? "business-outline" : "layers-outline"} size={24} color={TEXT_MUTED} />
+              <Text style={styles.navLabelText}>{userData.role === 'sppg' ? 'Sekolah' : 'Kelas'}</Text>
+           </TouchableOpacity>
+         )}
+         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(userData.role === 'sppg' ? 'Laporan' : userData.role === 'sekolah' ? 'LaporanSekolah' : 'LaporanKantin')}>
             <Ionicons name="bar-chart-outline" size={24} color={TEXT_MUTED} />
             <Text style={styles.navLabelText}>Laporan</Text>
          </TouchableOpacity>

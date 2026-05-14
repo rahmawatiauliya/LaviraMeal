@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
+import apiClient from '../../../api/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BLUE_PRIMARY = '#0B1E3F';
 const WHITE = '#FFFFFF';
@@ -27,12 +29,65 @@ export default function QRScannerScreen({ navigation }) {
     );
   }
 
-  const handleBarcodeScanned = ({ type, data }) => {
+  const handleBarcodeScanned = async ({ type, data }) => {
+    if (scanned) return;
     setScanned(true);
-    // Logic after scanning
-    alert(`QR Code Scanned: ${data}`);
-    // You can navigate back or perform an action here
-    // navigation.goBack();
+    
+    // Identifikasi apakah ini QR Kantin (Case-insensitive)
+    const upperData = data.toUpperCase();
+    if (upperData.includes('KANTIN') || upperData.startsWith('K')) {
+      Alert.alert(
+        "Konfirmasi Transaksi",
+        "Apakah Anda yakin ingin melakukan transaksi makan di kantin ini? (1 PTS)",
+        [
+          { text: "Batal", onPress: () => setScanned(false), style: "cancel" },
+          { 
+            text: "Proses", 
+            onPress: async () => {
+              try {
+                // SIMULASI ALUR POIN: Potong saldo siswa
+                const currentSaldoStr = await AsyncStorage.getItem('simulated_saldo') || '100';
+                let currentSaldo = parseInt(currentSaldoStr);
+                
+                if (currentSaldo < 1) {
+                  Alert.alert("Saldo Tidak Cukup", "Poin Anda tidak mencukupi untuk transaksi ini.");
+                  setScanned(false);
+                  return;
+                }
+
+                // Potong 1 PTS
+                const newSaldo = currentSaldo - 1;
+                await AsyncStorage.setItem('simulated_saldo', String(newSaldo));
+
+                // Tambahkan simulasi pendapatan kantin (optional)
+                const currentEarning = await AsyncStorage.getItem('simulated_kantin_earning') || '0';
+                await AsyncStorage.setItem('simulated_kantin_earning', String(parseInt(currentEarning) + 1));
+
+                // Simpan notifikasi feedback baru untuk kantin (simulasi)
+                const feedbackQueue = await AsyncStorage.getItem('simulated_feedbacks') || '[]';
+                const feedbacks = JSON.parse(feedbackQueue);
+                // (Feedback sebenarnya akan dikirim dari FeedbackScreen, ini hanya placeholder alur)
+
+                // Navigasi ke Layar Feedback (WAJIB)
+                navigation.replace('Feedback', { 
+                  canteenData: { 
+                    name: data.replace('KANTIN-', '').replace('K-', ''), 
+                    id: data,
+                    amount: 1
+                  } 
+                });
+              } catch (e) {
+                Alert.alert("Error", "Gagal memproses transaksi simulasi");
+                setScanned(false);
+              }
+            }
+          }
+        ]
+      );
+    } else {
+      Alert.alert("QR Code", `Data terdeteksi: ${data}`);
+      setScanned(false);
+    }
   };
 
   return (
