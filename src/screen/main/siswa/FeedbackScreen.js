@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import apiClient from '../../../api/client';
 
@@ -29,6 +30,16 @@ export default function FeedbackScreen({ route, navigation }) {
   const [review, setReview] = useState('');
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState('siswa');
+
+  React.useEffect(() => {
+    AsyncStorage.getItem('user_data').then(dataStr => {
+      if (dataStr) {
+        const parsed = JSON.parse(dataStr);
+        setUserRole(parsed.role || 'siswa');
+      }
+    });
+  }, []);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -41,7 +52,7 @@ export default function FeedbackScreen({ route, navigation }) {
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.7,
+      quality: 0.3,
     });
 
     if (!result.canceled) {
@@ -58,29 +69,56 @@ export default function FeedbackScreen({ route, navigation }) {
       Alert.alert('Peringatan', 'Silakan tulis ulasan Anda.');
       return;
     }
+    if (!image) {
+      Alert.alert('Peringatan', 'Silakan lampirkan foto makanan sebagai bukti wajib.');
+      return;
+    }
 
     setLoading(true);
     try {
-      // Logic upload ke backend
-      // const formData = new FormData();
-      // formData.append('rating', rating);
-      // formData.append('review', review);
-      // formData.append('kantin_id', canteenData.id);
-      // if (image) {
-      //   const filename = image.split('/').pop();
-      //   const match = /\.(\w+)$/.exec(filename);
-      //   const type = match ? `image/${match[1]}` : `image`;
-      //   formData.append('photo', { uri: image, name: filename, type });
-      // }
+      const userDataStr = await AsyncStorage.getItem('user_data');
+      const userData = userDataStr ? JSON.parse(userDataStr) : null;
       
-      // await apiClient.post('siswa/siswa_submit_feedback.php', formData, {
-      //   headers: { 'Content-Type': 'multipart/form-data' },
-      // });
+      const formData = new FormData();
+      formData.append('rating', rating);
+      formData.append('review', review);
+      formData.append('kantin_id', canteenData?.id || '');
+      formData.append('transaksi_id', canteenData?.transaksi_id || '');
+      formData.append('siswa_id', userData?.id || '');
+
+      if (image) {
+        const localUri = image;
+        let filename = localUri.split('/').pop().split('?')[0];
+        if (!filename.includes('.')) {
+          filename = filename + '.jpg';
+        }
+        const ext = filename.split('.').pop().toLowerCase();
+        const type = `image/${ext === 'png' ? 'png' : 'jpeg'}`;
+
+        formData.append('photo', { 
+          uri: localUri, 
+          name: filename, 
+          type: type 
+        });
+      }
+      
+      await apiClient.post('siswa/siswa_submit_feedback.php', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
       Alert.alert(
         "Terima Kasih",
         "Ulasan Anda sangat berarti bagi pengembangan kualitas layanan kantin kami.",
-        [{ text: "Selesai", onPress: () => navigation.replace('HomeSiswa') }]
+        [{ 
+          text: "Selesai", 
+          onPress: () => {
+            if (userRole === 'guru') {
+              navigation.replace('HomeGuru');
+            } else {
+              navigation.replace('HomeSiswa');
+            }
+          } 
+        }]
       );
     } catch (error) {
       console.error(error);
@@ -149,7 +187,7 @@ export default function FeedbackScreen({ route, navigation }) {
           </View>
 
           <View style={styles.imageSection}>
-            <Text style={styles.sectionLabel}>Unggah Foto (Opsional)</Text>
+            <Text style={styles.sectionLabel}>Unggah Foto Makanan (Wajib)</Text>
             <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
               {image ? (
                 <Image source={{ uri: image }} style={styles.previewImage} />

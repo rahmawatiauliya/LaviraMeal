@@ -59,7 +59,7 @@ export default function HomeScreenSppg({ navigation }) {
       }
     };
     init();
-    
+
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
@@ -90,7 +90,7 @@ export default function HomeScreenSppg({ navigation }) {
         const parsed = userData ? JSON.parse(userData) : null;
         sppgId = parsed?.sppg_id;
       }
-      
+
       if (!sppgId) return;
 
       const response = await apiClient.get(`sppg/sppg_get_stats.php?sppg_id=${sppgId}`);
@@ -98,7 +98,7 @@ export default function HomeScreenSppg({ navigation }) {
         const newData = response.data.data || {};
         setStats(prev => ({ ...prev, ...newData }));
         setPendingKantinCount(newData.total_verifikasi || 0);
-        
+
         if (newData.riwayat_transaksi) {
           setTransHistory(newData.riwayat_transaksi);
         }
@@ -180,9 +180,9 @@ export default function HomeScreenSppg({ navigation }) {
 
       {/* FIXED HEADER */}
       <View style={styles.headerFixed}>
-        <Image 
-          source={require('../../../../assets/batik_cirebon.png')} 
-          style={styles.batikOverlay} 
+        <Image
+          source={require('../../../../assets/batik_cirebon.png')}
+          style={styles.batikOverlay}
         />
         <SafeAreaView>
           <View style={[styles.topNav, isLargeScreen && styles.centeredContent]}>
@@ -195,17 +195,31 @@ export default function HomeScreenSppg({ navigation }) {
                 <Text style={styles.brandMain}>Admin SPPG {userName}</Text>
               </View>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.notifCircle}
-              onPress={() => navigation.navigate('PersetujuanRegistrasi')}
+              onPress={() => navigation.navigate('NotificationList')}
             >
               <Ionicons name="notifications-outline" size={24} color={WHITE} />
-              {pendingKantinCount > 0 && (
+              {(pendingKantinCount > 0 || (stats.notifikasi && stats.notifikasi.length > 0)) && (
                 <View style={styles.notifBadge}>
-                  <Text style={styles.notifBadgeText}>{pendingKantinCount}</Text>
+                  <Text style={styles.notifBadgeText}>{pendingKantinCount + (stats.notifikasi ? stats.notifikasi.length : 0)}</Text>
                 </View>
               )}
             </TouchableOpacity>
+          </View>
+
+          {/* SPOTLIGHT POINTS BALANCE CARD */}
+          <View style={styles.spotlightCard}>
+            <View style={styles.spotlightLeft}>
+              <Text style={styles.spotlightLabel}>Alokasi Poin Terdistribusi</Text>
+              <Text style={styles.spotlightVal}>{Number(stats.poin_distribusi || 0).toLocaleString('id-ID')} PTS</Text>
+              <Text style={styles.spotlightSub}>Setara Rp {Number((stats.poin_distribusi || 0) * 15000).toLocaleString('id-ID')}</Text>
+            </View>
+            <View style={styles.spotlightRight}>
+              <View style={styles.badgeMbg}>
+                <Text style={styles.badgeMbgText}>MBG</Text>
+              </View>
+            </View>
           </View>
         </SafeAreaView>
       </View>
@@ -220,59 +234,65 @@ export default function HomeScreenSppg({ navigation }) {
             isLargeScreen && styles.centeredContent
           ]}
         >
-          {/* HERO CONTENT */}
-          <View style={styles.heroContent}>
-            <Text style={styles.heroSmallTitle}>MONITORING DISTRIBUSI POINT</Text>
-            <Text style={[styles.heroMainTitle, isLargeScreen && { fontSize: 36 }]}>Otoritas Wilayah</Text>
-            <Text style={styles.heroSubTitle}>Kontrol Distribusi & Verifikasi Terpadu</Text>
+          <View style={{ paddingHorizontal: 25, paddingTop: 25 }}>
+            {/* QUICK ACTIONS ROW */}
+            <View style={styles.quickActionsContainer}>
+              <TouchableOpacity style={styles.quickActionItem} onPress={() => navigation.navigate('AturJadwalPoin')}>
+                <View style={[styles.quickActionIcon, { backgroundColor: '#EEF2FF' }]}>
+                  <Ionicons name="calendar" size={22} color="#4F46E5" />
+                </View>
+                <Text style={styles.quickActionLabel}>Jadwal Poin</Text>
+              </TouchableOpacity>
 
-            <View style={[styles.actionContainer, isLargeScreen && { flexDirection: 'row', flexWrap: 'wrap' }]}>
-              <View style={[styles.actionRow, isLargeScreen && { flex: 2 }]}>
-                <TouchableOpacity style={styles.btnJadwal} onPress={() => navigation.navigate('AturJadwalPoin')}>
-                  <Ionicons name="calendar" size={18} color={BLUE_PRIMARY} />
-                  <Text style={styles.btnJadwalText}>Jadwal Poin</Text>
+              <TouchableOpacity style={styles.quickActionItem} onPress={() => navigation.navigate('MonitoringMenu')}>
+                <View style={[styles.quickActionIcon, { backgroundColor: '#FFF1F2' }]}>
+                  <Ionicons name="restaurant" size={22} color="#F43F5E" />
+                </View>
+                <Text style={styles.quickActionLabel}>Pantau Menu</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.quickActionItem} onPress={() => navigation.navigate('PersetujuanRegistrasi')}>
+                <View style={[styles.quickActionIcon, { backgroundColor: '#FFF7ED' }]}>
+                  <Ionicons name="shield-checkmark" size={22} color="#F59E0B" />
+                  {pendingKantinCount > 0 && (
+                    <View style={styles.quickActionBadge}>
+                      <Text style={styles.quickActionBadgeText}>{pendingKantinCount}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.quickActionLabel}>Verifikasi</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.quickActionItem} onPress={() => navigation.navigate('Laporan')}>
+                <View style={[styles.quickActionIcon, { backgroundColor: '#F0FDF4' }]}>
+                  <Ionicons name="bar-chart" size={22} color="#10B981" />
+                </View>
+                <Text style={styles.quickActionLabel}>Laporan</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* OVERVIEW STATS */}
+            <View style={styles.statsSection}>
+              <Text style={styles.sectionTitle}>Ringkasan Informasi</Text>
+              <View style={styles.statsGrid}>
+                <TouchableOpacity style={styles.statsCard} onPress={() => navigation.navigate('Sekolah')}>
+                  <Text style={styles.statsVal}>{stats.total_sekolah}</Text>
+                  <Text style={styles.statsLab}>Sekolah</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.btnPantau} onPress={() => navigation.navigate('MonitoringMenu')}>
-                  <Ionicons name="restaurant" size={18} color={WHITE} />
-                  <Text style={styles.btnPantauText}>Pantau Menu</Text>
+                <TouchableOpacity style={styles.statsCard} onPress={() => navigation.navigate('PersetujuanRegistrasi')}>
+                  <Text style={[styles.statsVal, { color: '#F59E0B' }]}>{stats.total_verifikasi}</Text>
+                  <Text style={styles.statsLab}>Pending</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.statsCard} onPress={() => navigation.navigate('Kantin')}>
+                  <Text style={[styles.statsVal, { color: '#10B981' }]}>{stats.kantin_aktif}</Text>
+                  <Text style={styles.statsLab}>Kantin</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={[styles.btnVerifikasi, isLargeScreen && { flex: 1, marginTop: 0 }]} onPress={() => navigation.navigate('PersetujuanRegistrasi')}>
-                <Ionicons name="shield-checkmark" size={18} color={WHITE} />
-                <Text style={styles.btnVerifikasiText}>Verifikasi Kantin</Text>
-                {pendingKantinCount > 0 && (
-                  <View style={styles.btnBadge}>
-                    <Text style={styles.btnBadgeText}>{pendingKantinCount}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
             </View>
           </View>
 
-          {/* METRICS GRID - RESPONSIVE COLUMNS */}
-          <View style={[styles.metricsGrid, isLargeScreen && { justifyContent: 'flex-start', gap: 20 }]}>
-            {[
-              { label: 'Sekolah', val: stats.total_sekolah, icon: 'grid', color: '#4F46E5', bg: '#EEF2FF', route: 'Sekolah' },
-              { label: 'Verifikasi', val: stats.total_verifikasi, icon: 'shield-checkmark', color: '#F59E0B', bg: '#FFF7ED', route: 'PersetujuanRegistrasi' },
-              { label: 'Kantin', val: stats.kantin_aktif, icon: 'restaurant', color: '#10B981', bg: '#F0FDF4', route: 'Kantin' },
-              { label: 'Point', val: Number(stats.point_bulan_ini || 0).toLocaleString('id-ID'), icon: 'star', color: '#8B5CF6', bg: '#FAF5FF', route: 'AturJadwalPoin' }
-            ].map((item, idx) => (
-              <TouchableOpacity 
-                key={idx} 
-                style={[styles.metricCard, isLargeScreen && { width: '23.5%' }]} 
-                onPress={() => navigation.navigate(item.route)}
-              >
-                <View style={[styles.metricIconBox, { backgroundColor: item.bg }]}>
-                  <Ionicons name={item.icon} size={22} color={item.color} />
-                </View>
-                <Text style={[styles.metricVal, { color: item.color }]}>{item.val}</Text>
-                <Text style={styles.metricLab}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
           {/* LOG AKTIVITAS */}
-          <View style={styles.logContainer}>
+          <View style={[styles.logContainer, { marginTop: 25 }]}>
             <View style={styles.logHeader}>
               <Text style={styles.logTitle}>Log Aktivitas Terbaru</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Laporan')}>
@@ -282,13 +302,13 @@ export default function HomeScreenSppg({ navigation }) {
 
             {transHistory.map((item, index) => (
               <TouchableOpacity key={index} style={styles.logItem} onPress={() => handleLogPress(item)}>
-                <View style={[styles.logIconBox, { 
-                  backgroundColor: item.type === 'Kirim' ? '#ECFDF5' : (item.status === 'Baru' ? '#FFF7ED' : '#FEF2F2') 
+                <View style={[styles.logIconBox, {
+                  backgroundColor: item.type === 'Kirim' ? '#ECFDF5' : (item.status === 'Baru' ? '#FFF7ED' : '#FEF2F2')
                 }]}>
-                  <Ionicons 
-                    name={item.type === 'Kirim' ? 'card' : (item.status === 'Baru' ? 'shield' : 'alert-circle')} 
-                    size={22} 
-                    color={item.type === 'Kirim' ? '#10B981' : (item.status === 'Baru' ? '#F59E0B' : '#EF4444')} 
+                  <Ionicons
+                    name={item.type === 'Kirim' ? 'card' : (item.status === 'Baru' ? 'shield' : 'alert-circle')}
+                    size={22}
+                    color={item.type === 'Kirim' ? '#10B981' : (item.status === 'Baru' ? '#F59E0B' : '#EF4444')}
                   />
                 </View>
                 <View style={styles.logTextContainer}>
@@ -297,10 +317,10 @@ export default function HomeScreenSppg({ navigation }) {
                     {item.type === 'Kirim' ? 'Auto-Monthly' : (item.status === 'Baru' ? 'Menunggu verifikasi' : 'Belum posting menu')} • {item.date}
                   </Text>
                 </View>
-                <Text style={[styles.logStatus, { 
-                  color: item.type === 'Kirim' ? '#10B981' : (item.status === 'Baru' ? '#F59E0B' : '#EF4444') 
+                <Text style={[styles.logStatus, {
+                  color: item.type === 'Kirim' ? '#10B981' : (item.status === 'Baru' ? '#F59E0B' : '#EF4444')
                 }]}>
-                  {item.type === 'Kirim' ? `+${(Number(item.amount || 0)/1000).toFixed(0)}K` : (item.status === 'Baru' ? 'Baru' : '!')}
+                  {item.type === 'Kirim' ? `+${Number(item.amount || 0).toLocaleString('id-ID')}` : (item.status === 'Baru' ? 'Baru' : '!')}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -336,7 +356,7 @@ export default function HomeScreenSppg({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: BLUE_PRIMARY },
   centeredContent: { width: '100%', maxWidth: 1000, alignSelf: 'center' },
-  headerFixed: { paddingHorizontal: 20, paddingBottom: 50, paddingTop: 10 },
+  headerFixed: { paddingHorizontal: 20, paddingBottom: 25, paddingTop: 10 },
   batikOverlay: { ...StyleSheet.absoluteFillObject, opacity: 0.1, resizeMode: 'repeat' },
   topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 50 },
   avatarRow: { flexDirection: 'row', alignItems: 'center' },
@@ -351,28 +371,32 @@ const styles = StyleSheet.create({
   notifBadge: { position: 'absolute', top: 5, right: 5, backgroundColor: '#F43F5E', borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: BLUE_PRIMARY },
   notifBadgeText: { color: WHITE, fontSize: 8, fontWeight: 'bold' },
 
+  // SPOTLIGHT CARD STYLES
+  spotlightCard: { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 24, padding: 20, marginTop: 20, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  spotlightLeft: { flex: 1 },
+  spotlightLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '600' },
+  spotlightVal: { color: WHITE, fontSize: 26, fontWeight: 'bold', marginTop: 4 },
+  spotlightSub: { color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: 'bold', marginTop: 4 },
+  badgeMbg: { backgroundColor: '#F59E0B', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  badgeMbgText: { color: WHITE, fontSize: 11, fontWeight: 'bold' },
+
   whiteSection: { flex: 1, backgroundColor: '#F5F7FA', borderTopLeftRadius: 40, borderTopRightRadius: 40, marginTop: -20 },
-  heroContent: { padding: 25 },
-  heroSmallTitle: { color: '#94A3B8', fontSize: 11, fontWeight: 'bold', letterSpacing: 1 },
-  heroMainTitle: { color: BLUE_PRIMARY, fontSize: 28, fontWeight: 'bold', marginTop: 5 },
-  heroSubTitle: { color: '#64748B', fontSize: 14, marginTop: 5 },
 
-  actionContainer: { marginTop: 25, gap: 12 },
-  actionRow: { flexDirection: 'row', gap: 12 },
-  btnJadwal: { flex: 1, height: 50, backgroundColor: WHITE, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 },
-  btnJadwalText: { color: BLUE_PRIMARY, fontSize: 13, fontWeight: 'bold', marginLeft: 8 },
-  btnPantau: { flex: 1, height: 50, backgroundColor: '#EC4899', borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#EC4899', shadowOpacity: 0.2, shadowRadius: 10 },
-  btnPantauText: { color: WHITE, fontSize: 13, fontWeight: 'bold', marginLeft: 8 },
-  btnVerifikasi: { width: '100%', height: 55, backgroundColor: BLUE_PRIMARY, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: BLUE_PRIMARY, shadowOpacity: 0.3, shadowRadius: 15 },
-  btnVerifikasiText: { color: WHITE, fontSize: 14, fontWeight: 'bold', marginLeft: 8 },
-  btnBadge: { position: 'absolute', top: -5, right: 20, backgroundColor: '#F43F5E', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: BLUE_PRIMARY },
-  btnBadgeText: { color: WHITE, fontSize: 10, fontWeight: 'bold' },
+  // QUICK ACTIONS ROW
+  quickActionsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, paddingHorizontal: 5 },
+  quickActionItem: { alignItems: 'center', width: '23%' },
+  quickActionIcon: { width: 55, height: 55, borderRadius: 18, justifyContent: 'center', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },
+  quickActionLabel: { fontSize: 11, fontWeight: 'bold', color: '#64748B', marginTop: 8, textAlign: 'center' },
+  quickActionBadge: { position: 'absolute', top: -5, right: -5, backgroundColor: '#F43F5E', borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: WHITE },
+  quickActionBadgeText: { color: WHITE, fontSize: 8, fontWeight: 'bold' },
 
-  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12, paddingHorizontal: 25, marginTop: 10 },
-  metricCard: { width: '48%', backgroundColor: WHITE, borderRadius: 24, padding: 20, elevation: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
-  metricIconBox: { width: 45, height: 45, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
-  metricVal: { fontSize: 24, fontWeight: 'bold', color: BLUE_PRIMARY },
-  metricLab: { fontSize: 13, color: '#64748B', fontWeight: 'bold', marginTop: 4 },
+  // OVERVIEW STATS
+  statsSection: { marginTop: 30 },
+  sectionTitle: { fontSize: 15, fontWeight: 'bold', color: BLUE_PRIMARY, marginBottom: 12 },
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
+  statsCard: { width: '31%', backgroundColor: WHITE, borderRadius: 20, padding: 15, alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10 },
+  statsVal: { fontSize: 22, fontWeight: 'bold', color: '#4F46E5' },
+  statsLab: { fontSize: 11, color: '#94A3B8', fontWeight: 'bold', marginTop: 4 },
 
   logContainer: { marginTop: 30, backgroundColor: WHITE, borderRadius: 28, padding: 25, marginHorizontal: 25, marginBottom: 50, elevation: 3, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 15 },
   logHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },

@@ -25,7 +25,7 @@ try {
     $kelas_wali = $guru['kelas_wali'];
 
     // 2. Get Students in Class
-    $stmtSiswa = $db->prepare("SELECT id, nis, nama, kelas, jenis_kelamin, aktif 
+    $stmtSiswa = $db->prepare("SELECT id, nis, nama, kelas, jenis_kelamin, is_active as aktif 
                                FROM siswa 
                                WHERE sekolah_id = ? AND kelas = ? 
                                ORDER BY nama ASC");

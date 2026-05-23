@@ -18,6 +18,9 @@ if ($method == 'POST') {
                              u.sekolah_id, 
                              COALESCE(u.sppg_id, sp.id) AS sppg_id,
                              s.nama_sekolah, 
+                             s.npsn,
+                             COALESCE(s.kota, sp.kota) AS kota,
+                             COALESCE(s.provinsi, sp.provinsi) AS provinsi,
                              sp.nama_lembaga,
                              ss.nis,
                              ss.kelas,
@@ -28,13 +31,14 @@ if ($method == 'POST') {
                       LEFT JOIN sppg sp ON u.sppg_id = sp.id OR sp.user_id = u.id
                       LEFT JOIN siswa ss ON u.id = ss.user_id 
                       LEFT JOIN guru g ON u.id = g.user_id
-                      WHERE (u.username = :idnt1 OR u.email = :idnt2 OR ss.nis = :idnt3) 
+                      WHERE (u.username = :idnt1 OR u.email = :idnt2 OR ss.nis = :idnt3 OR g.nip = :idnt4) 
                       LIMIT 1";
 
             $stmt = $db->prepare($query);
             $stmt->bindParam(":idnt1", $idnt);
             $stmt->bindParam(":idnt2", $idnt);
             $stmt->bindParam(":idnt3", $idnt);
+            $stmt->bindParam(":idnt4", $idnt);
             $stmt->execute();
 
             if ($stmt->rowCount() > 0) {
@@ -47,7 +51,7 @@ if ($method == 'POST') {
                         http_response_code(403);
                         echo json_encode([
                             "status" => "error", 
-                            "message" => "Akun Anda sedang menunggu persetujuan (ACC) dari admin SPPG. Silakan cek berkala."
+                            "message" => "Akun Anda belum aktif. Harap menunggu 1-2 hari kerja untuk proses verifikasi oleh Admin Sekolah dan SPPG. Silakan cek kembali secara berkala."
                         ]);
                         exit;
                     }

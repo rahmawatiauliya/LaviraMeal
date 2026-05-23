@@ -23,7 +23,7 @@ try {
 
     if ($siswa_id) {
         // Verifikasi individual
-        $stmt = $db->prepare("UPDATE siswa SET aktif = 1 WHERE id = ? AND sekolah_id = ?");
+        $stmt = $db->prepare("UPDATE siswa SET is_active = 1 WHERE id = ? AND sekolah_id = ?");
         $stmt->execute([$siswa_id, $sekolah_id]);
 
         // Aktifkan juga akun user-nya
@@ -33,7 +33,7 @@ try {
         $message = "Siswa berhasil diverifikasi";
     } else {
         // Verifikasi per kelas
-        $stmt = $db->prepare("UPDATE siswa SET aktif = 1 WHERE sekolah_id = ? AND kelas = ?");
+        $stmt = $db->prepare("UPDATE siswa SET is_active = 1 WHERE sekolah_id = ? AND kelas = ?");
         $stmt->execute([$sekolah_id, $kelas]);
 
         // Aktifkan semua akun user di kelas tersebut

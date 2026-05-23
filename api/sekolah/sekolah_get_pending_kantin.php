@@ -11,10 +11,10 @@ if (!$sekolah_id) {
 }
 
 try {
-    $query = "SELECT k.*, u.username as email 
+    $query = "SELECT k.*, u.username, u.email as user_email
               FROM kantin k 
               JOIN users u ON k.user_id = u.id 
-              WHERE k.sekolah_id = :sid AND u.is_active = 0
+              WHERE k.sekolah_id = :sid AND k.status_sekolah = 'pending'
               ORDER BY k.created_at DESC";
     
     $stmt = $db->prepare($query);

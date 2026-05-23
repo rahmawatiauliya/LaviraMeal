@@ -14,6 +14,8 @@ import TambahSekolahScreen from './src/screen/main/sppg/TambahSekolahScreen';
 import DetailSekolahScreen from './src/screen/main/sppg/DetailSekolahScreen';
 import LaporanScreen from './src/screen/main/sppg/LaporanScreen';
 import ProfilScreen from './src/screen/main/sppg/ProfilScreen';
+import ProfilSekolahScreen from './src/screen/main/admin_sekolah/ProfilSekolahScreen';
+import ProfilKantinScreen from './src/screen/main/kantin/ProfilKantinScreen';
 import KantinScreen from './src/screen/main/sppg/KantinScreen';
 import VerifikasiKantinScreen from './src/screen/main/sppg/VerifikasiKantinScreen';
 import PersetujuanRegistrasiScreen from './src/screen/main/sppg/PersetujuanRegistrasiScreen';
@@ -24,21 +26,29 @@ import RiwayatSekolahScreen from './src/screen/main/admin_sekolah/RiwayatSekolah
 import HomeScreenSiswa from './src/screen/main/siswa/HomeScreenSiswa';
 import QRScannerScreen from './src/screen/main/siswa/QRScannerScreen';
 import RiwayatSiswaScreen from './src/screen/main/siswa/RiwayatSiswaScreen';
+import ProfilSiswaScreen from './src/screen/main/siswa/ProfilSiswaScreen';
 import ManajemenGuruScreen from './src/screen/main/admin_sekolah/ManajemenGuruScreen';
 import HomeScreenGuru from './src/screen/main/guru/HomeScreenGuru';
 import DaftarSiswaWaliScreen from './src/screen/main/guru/DaftarSiswaWaliScreen';
 import AbsensiKonsumsiScreen from './src/screen/main/guru/AbsensiKonsumsiScreen';
 import RekapKelasScreen from './src/screen/main/guru/RekapKelasScreen';
+import ProfilGuruScreen from './src/screen/main/guru/ProfilGuruScreen';
+import RiwayatGuruScreen from './src/screen/main/guru/RiwayatGuruScreen';
 import AturJadwalPoinScreen from './src/screen/main/sppg/AturJadwalPoinScreen';
 import MonitoringMenuScreen from './src/screen/main/shared/MonitoringMenuScreen';
 import MenuDetailScreen from './src/screen/main/shared/MenuDetailScreen';
 import KantinApprovalScreen from './src/screen/main/admin_sekolah/KantinApprovalScreen';
-import RegisterScreen from './src/screen/auth/RegisterScreen';
-import RegisterGuruScreen from './src/screen/auth/RegisterGuruScreen';
+import RegisterSppgScreen from './src/screen/auth/RegisterSppgScreen';
+import RegisterKantinScreen from './src/screen/auth/RegisterKantinScreen';
 import HomeScreenKantin from './src/screen/main/kantin/HomeScreenKantin';
 import ScannerKantinScreen from './src/screen/main/kantin/ScannerKantinScreen';
 import LaporanKantinScreen from './src/screen/main/kantin/LaporanKantinScreen';
 import FeedbackScreen from './src/screen/main/siswa/FeedbackScreen';
+import ManajemenPoinScreen from './src/screen/main/admin_sekolah/ManajemenPoinScreen';
+import PostMenuHarianScreen from './src/screen/main/kantin/PostMenuHarianScreen';
+import RiwayatMenuHarianScreen from './src/screen/main/shared/RiwayatMenuHarianScreen';
+import NotificationListScreen from './src/screen/main/shared/NotificationListScreen';
+import LandingScreen from './src/screen/auth/LandingScreen';
 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -49,8 +59,12 @@ export default function App() {
     <SafeAreaProvider>
       <NavigationContainer>
         <StatusBar style="auto" translucent={true} />
-        <Stack.Navigator initialRouteName="Login">
-          {/* ... existing screens ... */}
+        <Stack.Navigator initialRouteName="Landing">
+          <Stack.Screen
+            name="Landing"
+            component={LandingScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen
             name="Login"
             component={LoginScreen}
@@ -122,6 +136,16 @@ export default function App() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
+            name="ProfilSekolah"
+            component={ProfilSekolahScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ProfilKantin"
+            component={ProfilKantinScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="Kantin"
             component={KantinScreen}
             options={{ headerShown: false }}
@@ -152,8 +176,23 @@ export default function App() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
+            name="ProfilSiswa"
+            component={ProfilSiswaScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="HomeGuru"
             component={HomeScreenGuru}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ProfilGuru"
+            component={ProfilGuruScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="RiwayatGuru"
+            component={RiwayatGuruScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -192,13 +231,13 @@ export default function App() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
-            name="RegisterScreen"
-            component={RegisterScreen}
+            name="RegisterSppg"
+            component={RegisterSppgScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
-            name="RegisterGuruScreen"
-            component={RegisterGuruScreen}
+            name="RegisterKantin"
+            component={RegisterKantinScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -219,6 +258,26 @@ export default function App() {
           <Stack.Screen
             name="Feedback"
             component={FeedbackScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ManajemenPoin"
+            component={ManajemenPoinScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="PostMenuHarian"
+            component={PostMenuHarianScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="RiwayatMenuHarian"
+            component={RiwayatMenuHarianScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="NotificationList"
+            component={NotificationListScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

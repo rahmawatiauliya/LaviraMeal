@@ -17,8 +17,8 @@ try {
     $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$siswa) {
-         echo json_encode(["status" => "error", "message" => "Data siswa tidak ditemukan untuk user_id: $user_id"]);
-         exit();
+        echo json_encode(["status" => "error", "message" => "Data siswa tidak ditemukan untuk user_id: $user_id"]);
+        exit();
     }
 
     $siswa_internal_id = $siswa['siswa_internal_id'];
@@ -27,7 +27,7 @@ try {
     $stmtAbsen = $db->prepare("SELECT id FROM siswa_pengambilan_mbg WHERE siswa_id = ? AND DATE(tanggal) = CURDATE()");
     $stmtAbsen->execute([$siswa_internal_id]);
     $sudah_ambil = $stmtAbsen->rowCount() > 0 ? 'Sudah' : 'Belum';
-    
+
     // 3. Ambil Riwayat Terakhir (UNION antara Transaksi Finansial & Pengambilan Makan)
     $stmtHistory = $db->prepare("
         (SELECT created_at, message, nominal as amount, type 
@@ -45,7 +45,7 @@ try {
     echo json_encode([
         "status" => "success",
         "data" => [
-            "saldo" => (float)$siswa['saldo'],
+            "saldo" => (float) $siswa['saldo'],
             "poin" => rand(10, 100), // Dummy poin untuk estetika
             "absensi_hari_ini" => $sudah_ambil,
             "qr_code_token" => $siswa['qr_code_token'],

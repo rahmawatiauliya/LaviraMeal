@@ -14,21 +14,40 @@ if (!$kantin_id || !$user_id) {
 }
 
 try {
+    $action = $data['action'] ?? 'approved';
+    $notes = $data['notes'] ?? '';
+
     $db->beginTransaction();
 
-    // 1. Update status di tabel kantin
-    $stmt1 = $db->prepare("UPDATE kantin SET is_aktif = 1 WHERE id = ?");
-    $stmt1->execute([$kantin_id]);
+    // 1. Update status_sekolah dan catatan_sekolah di tabel kantin
+    $stmt1 = $db->prepare("UPDATE kantin SET status_sekolah = ?, catatan_sekolah = ? WHERE user_id = ?");
+    $stmt1->execute([$action, $notes, $user_id]);
 
-    // 2. Aktifkan user kantin agar bisa login
-    $stmt2 = $db->prepare("UPDATE users SET is_active = 1 WHERE id = ?");
-    $stmt2->execute([$user_id]);
+    if ($action === 'approved') {
+        // 2. Cek apakah sudah disetujui juga oleh SPPG
+        $check = $db->prepare("SELECT status_sppg FROM kantin WHERE user_id = ?");
+        $check->execute([$user_id]);
+        $kantin = $check->fetch(PDO::FETCH_ASSOC);
+
+        if ($kantin && $kantin['status_sppg'] === 'approved') {
+            // Keduanya sudah setuju, aktifkan akun!
+            $db->prepare("UPDATE kantin SET is_aktif = 1 WHERE user_id = ?")->execute([$user_id]);
+            $db->prepare("UPDATE users SET is_active = 1 WHERE id = ?")->execute([$user_id]);
+            $msg = "Kantin berhasil disetujui Sekolah. Status: AKTIF.";
+        } else {
+            $msg = "Kantin berhasil disetujui Sekolah. Menunggu persetujuan Admin SPPG.";
+        }
+    } else {
+        // Jika rejected, pastikan is_active = 0
+        $db->prepare("UPDATE users SET is_active = 0 WHERE id = ?")->execute([$user_id]);
+        $msg = "Kantin berhasil ditolak (Rejected) oleh Sekolah.";
+    }
 
     $db->commit();
 
     echo json_encode([
         "status" => "success",
-        "message" => "Kantin berhasil disetujui dan kini aktif."
+        "message" => $msg
     ]);
 
 } catch (Exception $e) {

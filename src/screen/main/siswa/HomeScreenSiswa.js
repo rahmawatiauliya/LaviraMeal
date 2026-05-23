@@ -152,7 +152,7 @@ export default function HomeScreenSiswa({ navigation }) {
                   <Text style={styles.avatarText}>{userData?.nama?.charAt(0) || 'S'}</Text>
                 </View>
                 <View>
-                  <Text style={styles.welcomeText}>SELAMAT DATANG,</Text>
+                  <Text style={styles.welcomeText}>{userData?.role === 'guru' ? 'SELAMAT DATANG GURU,' : 'SELAMAT DATANG SISWA,'}</Text>
                   <Text style={styles.userName}>{userData?.nama || 'Siswa'}</Text>
                   <Text style={styles.schoolName}>{userData?.nama_sekolah || 'LAVIRA MEAL'}</Text>
                 </View>
@@ -202,10 +202,12 @@ export default function HomeScreenSiswa({ navigation }) {
           {/* RECENT ACTIVITY */}
           <View style={styles.activityHeader}>
             <Text style={styles.sectionTitle}>Aktivitas Terakhir</Text>
-            <TouchableOpacity><Text style={styles.viewAll}>Lihat Semua</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('RiwayatSiswa')}>
+              <Text style={styles.viewAll}>Lihat Semua</Text>
+            </TouchableOpacity>
           </View>
 
-          {stats.riwayat.length > 0 ? stats.riwayat.map((item, idx) => (
+          {stats.riwayat.length > 0 ? stats.riwayat.slice(0, 2).map((item, idx) => (
              <View key={idx} style={styles.activityCard}>
                 <View style={styles.activityIcon}><Ionicons name="fast-food-outline" size={20} color={BLUE_PRIMARY} /></View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
@@ -239,7 +241,7 @@ export default function HomeScreenSiswa({ navigation }) {
            <Text style={styles.navLabel}>Riwayat</Text>
          </TouchableOpacity>
 
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profil')}>
+         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('ProfilSiswa')}>
            <Ionicons name="person-outline" size={24} color="#94A3B8" />
            <Text style={styles.navLabel}>Profil</Text>
          </TouchableOpacity>
@@ -250,7 +252,7 @@ export default function HomeScreenSiswa({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalCloseRow}>
-              <Text style={styles.modalHeaderTitle}>QR Code Siswa</Text>
+              <Text style={styles.modalHeaderTitle}>{userData?.role === 'guru' ? 'QR Code Guru' : 'QR Code Siswa'}</Text>
               <TouchableOpacity onPress={() => setShowQRModal(false)}>
                 <Feather name="x" size={24} color="#64748B" />
               </TouchableOpacity>
@@ -271,7 +273,7 @@ export default function HomeScreenSiswa({ navigation }) {
 
               <View style={styles.studentInfoBox}>
                 <Text style={styles.infoName}>{userData?.nama}</Text>
-                <Text style={styles.infoNis}>NIS: {userData?.username}</Text>
+                <Text style={styles.infoNis}>{userData?.role === 'guru' ? 'NIP' : 'NIS'}: {userData?.username}</Text>
               </View>
 
               <TouchableOpacity style={styles.closeBtn} onPress={() => setShowQRModal(false)}>

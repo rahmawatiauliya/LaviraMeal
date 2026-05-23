@@ -9,6 +9,9 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Modal,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -22,6 +25,9 @@ export default function PersetujuanRegistrasiScreen({ navigation }) {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [reviewNote, setReviewNote] = useState('');
 
   const fetchPendingUsers = async () => {
     try {
@@ -42,29 +48,34 @@ export default function PersetujuanRegistrasiScreen({ navigation }) {
     fetchPendingUsers();
   }, []);
 
-  const handleApprove = (userId, userName) => {
+  const handleAction = async (action) => {
+    if (!selectedUser) return;
+    
     Alert.alert(
-      'Konfirmasi ACC',
-      `Setujui pendaftaran kantin atas nama ${userName}?`,
+      action === 'approved' ? 'Konfirmasi ACC' : 'Konfirmasi Tolak',
+      `${action === 'approved' ? 'Setujui' : 'Tolak'} pendaftaran kantin ${selectedUser.nama_kantin}?`,
       [
         { text: 'Batal', style: 'cancel' },
         {
-          text: 'Setujui',
+          text: action === 'approved' ? 'Setujui' : 'Tolak',
           onPress: async () => {
             try {
-              setActionLoading(userId);
+              setActionLoading(selectedUser.user_id);
               const response = await apiClient.post('sppg/approve_kantin.php', {
-                user_id: userId,
+                user_id: selectedUser.user_id,
+                action: action,
+                notes: reviewNote
               });
               if (response.data.status === 'success') {
-                Alert.alert('Sukses', 'Registrasi kantin berhasil disetujui');
+                Alert.alert('Sukses', response.data.message);
+                setModalVisible(false);
+                setReviewNote('');
                 fetchPendingUsers();
               } else {
                 Alert.alert('Gagal', response.data.message);
               }
             } catch (error) {
-              console.error(error);
-              Alert.alert('Error', 'Gagal memproses persetujuan');
+              Alert.alert('Error', 'Gagal memproses pendaftaran');
             } finally {
               setActionLoading(null);
             }
@@ -72,6 +83,12 @@ export default function PersetujuanRegistrasiScreen({ navigation }) {
         },
       ]
     );
+  };
+
+  const openDetail = (item) => {
+    setSelectedUser(item);
+    setReviewNote('');
+    setModalVisible(true);
   };
 
   const renderItem = ({ item }) => (
@@ -106,19 +123,100 @@ export default function PersetujuanRegistrasiScreen({ navigation }) {
 
       <TouchableOpacity
         style={styles.approveBtn}
-        onPress={() => handleApprove(item.id, item.nama)}
-        disabled={actionLoading === item.id}
+        onPress={() => openDetail(item)}
       >
-        {actionLoading === item.id ? (
-          <ActivityIndicator color={WHITE} />
-        ) : (
-          <>
-            <Ionicons name="checkmark-circle-outline" size={20} color={WHITE} />
-            <Text style={styles.approveBtnTxt}>Setujui Registrasi (ACC)</Text>
-          </>
-        )}
+        <Feather name="eye" size={18} color={WHITE} />
+        <Text style={styles.approveBtnTxt}>Lihat Detail & Proses</Text>
       </TouchableOpacity>
     </View>
+  );
+
+  const renderModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Detail Pendaftaran</Text>
+            <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
+            {selectedUser && (
+              <>
+                <Text style={styles.sectionLabel}>Data Pengelola</Text>
+                <View style={styles.detailBox}>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Pemilik:</Text> {selectedUser.pemilik}</Text>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Email:</Text> {selectedUser.email}</Text>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Username:</Text> {selectedUser.username}</Text>
+                </View>
+
+                <Text style={styles.sectionLabel}>Data Kantin</Text>
+                <View style={styles.detailBox}>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Nama Kantin:</Text> {selectedUser.nama_kantin}</Text>
+                  <Text style={styles.detailText}><Text style={styles.bold}>NPSN Sekolah:</Text> {selectedUser.npsn_sekolah}</Text>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Status Sekolah:</Text> {selectedUser.status_sekolah.toUpperCase()}</Text>
+                </View>
+
+                <Text style={styles.sectionLabel}>Foto Kantin</Text>
+                {selectedUser.foto_kantin ? (
+                  <Image 
+                    source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedUser.foto_kantin}` }} 
+                    style={styles.previewImg} 
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.noImg}><Text>Tidak ada foto</Text></View>
+                )}
+
+                <Text style={styles.sectionLabel}>Foto Menu</Text>
+                {selectedUser.foto_menu ? (
+                  <Image 
+                    source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedUser.foto_menu}` }} 
+                    style={styles.previewImg} 
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.noImg}><Text>Tidak ada foto</Text></View>
+                )}
+
+                <Text style={styles.sectionLabel}>Ulasan/Catatan Verifikasi</Text>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Berikan alasan setuju atau tolak..."
+                  multiline
+                  value={reviewNote}
+                  onChangeText={setReviewNote}
+                />
+              </>
+            )}
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.rejectBtn]} 
+              onPress={() => handleAction('rejected')}
+              disabled={!!actionLoading}
+            >
+              <Text style={styles.actionBtnTxt}>Tolak</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.approveFinalBtn]} 
+              onPress={() => handleAction('approved')}
+              disabled={!!actionLoading}
+            >
+              {actionLoading ? <ActivityIndicator color={WHITE} /> : <Text style={styles.actionBtnTxt}>Setujui (ACC)</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 
   return (
@@ -152,6 +250,7 @@ export default function PersetujuanRegistrasiScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         />
       )}
+      {renderModal()}
     </SafeAreaView>
   );
 }
@@ -232,4 +331,22 @@ const styles = StyleSheet.create({
   loadingTxt: { marginTop: 15, color: '#64748b', fontWeight: '500' },
   emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#1e293b', marginTop: 20 },
   emptySub: { fontSize: 14, color: '#94a3b8', textAlign: 'center', marginTop: 8 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: WHITE, borderTopLeftRadius: 30, borderTopRightRadius: 30, height: '90%', padding: 25 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: BLUE_PRIMARY },
+  modalBody: { flex: 1 },
+  sectionLabel: { fontSize: 14, fontWeight: 'bold', color: '#64748b', marginTop: 15, marginBottom: 8, textTransform: 'uppercase' },
+  detailBox: { backgroundColor: '#f8fafc', padding: 15, borderRadius: 15, gap: 5 },
+  detailText: { fontSize: 14, color: '#1e293b' },
+  bold: { fontWeight: 'bold' },
+  previewImg: { width: '100%', height: 200, borderRadius: 15, marginTop: 5 },
+  noImg: { width: '100%', height: 100, backgroundColor: '#f1f5f9', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+  noteInput: { backgroundColor: '#f1f5f9', borderRadius: 15, padding: 15, height: 100, textAlignVertical: 'top', marginTop: 5 },
+  modalFooter: { flexDirection: 'row', gap: 15, marginTop: 20, paddingBottom: 20 },
+  actionBtn: { flex: 1, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+  rejectBtn: { backgroundColor: '#ef4444' },
+  approveFinalBtn: { backgroundColor: '#10b981' },
+  actionBtnTxt: { color: WHITE, fontWeight: 'bold', fontSize: 16 },
 });

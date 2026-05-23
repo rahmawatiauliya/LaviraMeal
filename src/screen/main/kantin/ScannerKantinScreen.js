@@ -47,9 +47,12 @@ export default function ScannerKantinScreen({ navigation }) {
       });
 
       if (response.data && response.data.status === 'success') {
+        const menuDetail = response.data.menu_detail;
+        const menuName = menuDetail ? menuDetail.nama_menu : 'Paket Makan LaviraMeal';
+        
         Alert.alert(
           "Berhasil",
-          `Transaksi berhasil diproses untuk siswa: ${response.data.student_name}\nSaldo dipotong 15 PTS`,
+          `Siswa: ${response.data.student_name}\nMenu: ${menuName}\nSaldo dipotong: ${response.data.deducted_points} PTS`,
           [{ text: "OK", onPress: () => navigation.goBack() }]
         );
       } else {

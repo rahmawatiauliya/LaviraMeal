@@ -59,12 +59,13 @@ try {
 
     // Skip header
     fgetcsv($file, 1000, $delimiter);
+    file_put_contents('debug_import.log', "Header skipped. Starting loop...\n", FILE_APPEND);
 
     $successCount = 0;
     $errorCount = 0;
     $duplicateCount = 0;
 
-    $stmt = $db->prepare("INSERT INTO siswa (id, user_id, sekolah_id, nis, nama, kelas, jenis_kelamin, tanggal_lahir, nama_wali, no_telp_wali, qr_code_token, aktif) 
+    $stmt = $db->prepare("INSERT INTO siswa (id, user_id, sekolah_id, nis, nama, kelas, jenis_kelamin, tanggal_lahir, nama_wali, no_telp_wali, qr_code_token, is_active) 
                           VALUES (UUID(), :user_id, :sekolah_id, :nis, :nama, :kelas, :jenis_kelamin, :tanggal_lahir, :nama_wali, :no_telp_wali, :qr_code, 0)");
 
     // Siapkan proses insert akun otomatis
@@ -81,6 +82,7 @@ try {
         $nis = trim($row[0]);
         $nama = trim($row[1]);
         $kelas = trim($row[2]);
+        file_put_contents('debug_import.log', "Processing Row: $nis - $nama\n", FILE_APPEND);
         $jk = isset($row[3]) ? trim($row[3]) : null;
         $tgl_lahir = (isset($row[4]) && !empty($row[4])) ? trim($row[4]) : null;
         $wali = isset($row[5]) ? trim($row[5]) : null;
@@ -140,11 +142,7 @@ try {
     
     fclose($file);
 
-    // Update jumlah_siswa di tabel sekolah agar dashboard sinkron
-    if ($successCount > 0) {
-        $stmtUpdate = $db->prepare("UPDATE sekolah SET jumlah_siswa = (SELECT COUNT(*) FROM siswa WHERE sekolah_id = :sid) WHERE id = :sid2");
-        $stmtUpdate->execute([':sid' => $sekolah_id, ':sid2' => $sekolah_id]);
-    }
+    // Update jumlah_siswa - REMOVED because column doesn't exist
 
     echo json_encode([
         "status" => "success",

@@ -2,11 +2,11 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 
 // Konfigurasi URL API
-// Gunakan IP laptop (10.61.4.10) agar bisa diakses dari device fisik maupun emulator
+// Gunakan IP laptop (10.61.4.150) agar bisa diakses dari device fisik maupun emulator
 const DEV_BASE_URL = Platform.select({
-    android: 'http://10.60.4.15/project_lavirameal/api/',
-    ios: 'http://10.60.4.15/project_lavirameal/api/',
-    default: 'http://10.60.4.15/project_lavirameal/api/',
+    android: 'http://10.109.153.200/project_lavirameal/api/',
+    ios: 'http://10.109.153.200/project_lavirameal/api/',
+    default: 'http://10.109.153.200/project_lavirameal/api/',
 });
 // NOTE: Pastikan laptop dan HP berada dalam jaringan WiFi yang sama jika menggunakan device fisik.
 
@@ -14,12 +14,13 @@ const DEV_BASE_URL = Platform.select({
 
 
 // NOTE: User perlu menyesuaikan URL ini sesuai setup server PHP mereka
-// IP yang digunakan saat ini: 10.61.4.10
+// IP yang digunakan saat ini: 10.61.4.150
 
 export const API_URL = DEV_BASE_URL;
 
 const apiClient = axios.create({
     baseURL: API_URL,
+    timeout: 10000, // Tambahkan timeout 10 detik agar tidak muter-muter selamanya jika IP salah/firewall blokir
     headers: {
         'Content-Type': 'application/json',
     },

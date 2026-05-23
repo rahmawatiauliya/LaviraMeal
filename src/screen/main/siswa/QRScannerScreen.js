@@ -11,6 +11,22 @@ const WHITE = '#FFFFFF';
 export default function QRScannerScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [userRole, setUserRole] = useState('siswa');
+
+  useEffect(() => {
+    const getRole = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('user_data');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setUserRole(parsed.role || 'siswa');
+        }
+      } catch (e) {
+        console.error("Error fetching role:", e);
+      }
+    };
+    getRole();
+  }, []);
 
   if (!permission) {
     // Camera permissions are still loading.
@@ -36,48 +52,57 @@ export default function QRScannerScreen({ navigation }) {
     // Identifikasi apakah ini QR Kantin (Case-insensitive)
     const upperData = data.toUpperCase();
     if (upperData.includes('KANTIN') || upperData.startsWith('K')) {
+      const canteenName = data.replace('KANTIN-', '').replace('K-', '');
       Alert.alert(
         "Konfirmasi Transaksi",
-        "Apakah Anda yakin ingin melakukan transaksi makan di kantin ini? (1 PTS)",
+        `Apakah Anda yakin ingin melakukan transaksi makan di ${canteenName}? (1 PTS)`,
         [
           { text: "Batal", onPress: () => setScanned(false), style: "cancel" },
           { 
             text: "Proses", 
             onPress: async () => {
               try {
-                // SIMULASI ALUR POIN: Potong saldo siswa
-                const currentSaldoStr = await AsyncStorage.getItem('simulated_saldo') || '100';
-                let currentSaldo = parseInt(currentSaldoStr);
-                
-                if (currentSaldo < 1) {
-                  Alert.alert("Saldo Tidak Cukup", "Poin Anda tidak mencukupi untuk transaksi ini.");
-                  setScanned(false);
-                  return;
+                // Get the real logged in user ID
+                const userDataStr = await AsyncStorage.getItem('user_data');
+                if (!userDataStr) {
+                    Alert.alert("Error", "Sesi pengguna tidak valid.");
+                    setScanned(false);
+                    return;
                 }
-
-                // Potong 1 PTS
-                const newSaldo = currentSaldo - 1;
-                await AsyncStorage.setItem('simulated_saldo', String(newSaldo));
-
-                // Tambahkan simulasi pendapatan kantin (optional)
-                const currentEarning = await AsyncStorage.getItem('simulated_kantin_earning') || '0';
-                await AsyncStorage.setItem('simulated_kantin_earning', String(parseInt(currentEarning) + 1));
-
-                // Simpan notifikasi feedback baru untuk kantin (simulasi)
-                const feedbackQueue = await AsyncStorage.getItem('simulated_feedbacks') || '[]';
-                const feedbacks = JSON.parse(feedbackQueue);
-                // (Feedback sebenarnya akan dikirim dari FeedbackScreen, ini hanya placeholder alur)
-
-                // Navigasi ke Layar Feedback (WAJIB)
-                navigation.replace('Feedback', { 
-                  canteenData: { 
-                    name: data.replace('KANTIN-', '').replace('K-', ''), 
-                    id: data,
-                    amount: 1
-                  } 
+                const userData = JSON.parse(userDataStr);
+                
+                // CALL REAL API
+                const response = await apiClient.post('siswa/siswa_proses_makan.php', {
+                    siswa_id: userData.id,
+                    kantin_qr: data
                 });
+
+                if (response.data && response.data.status === 'success') {
+                    // Berhasil diproses, arahkan ke Layar Feedback
+                    Alert.alert(
+                      "Transaksi Berhasil",
+                      `Menu: ${response.data.menu_name}\nSaldo dipotong: ${response.data.deducted} PTS\n\nSilakan berikan ulasan Anda!`,
+                      [{
+                          text: "Lanjutkan",
+                          onPress: () => {
+                              navigation.replace('Feedback', { 
+                                canteenData: { 
+                                  name: response.data.kantin_name, 
+                                  id: response.data.kantin_id,
+                                  amount: response.data.deducted,
+                                  transaksi_id: response.data.transaksi_id
+                                } 
+                              });
+                          }
+                      }]
+                    );
+                } else {
+                    Alert.alert("Transaksi Gagal", response.data.message || "Terjadi kesalahan.");
+                    setScanned(false);
+                }
               } catch (e) {
-                Alert.alert("Error", "Gagal memproses transaksi simulasi");
+                console.log(e);
+                Alert.alert("Error", "Gagal memproses transaksi. Periksa koneksi Anda.");
                 setScanned(false);
               }
             }

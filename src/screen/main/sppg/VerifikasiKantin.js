@@ -37,14 +37,14 @@ export default function VerifikasiKantin({ navigation, route }) {
       "Apakah Anda sudah meninjau kelayakan fisik dan menu kantin ini?",
       [
         { text: "Batal", style: "cancel" },
-        { 
-          text: "Verifikasi Sekarang", 
+        {
+          text: "Verifikasi Sekarang",
           onPress: async () => {
             try {
               setLoading(true);
-              const response = await apiClient.post('sppg/sppg_verify_kantin.php', {
-                kantin_id: canteen.id,
-                action: 'verify'
+              const response = await apiClient.post('sppg/approve_kantin.php', {
+                user_id: canteen.user_id,
+                action: 'approved'
               });
               if (response.data && response.data.status === 'success') {
                 setVerifiedBySppg(true);
@@ -66,102 +66,102 @@ export default function VerifikasiKantin({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
+
       <View style={styles.header}>
-         <Image source={require('../../../../assets/batik_cirebon.png')} style={[StyleSheet.absoluteFillObject, { opacity: 0.05, resizeMode: 'repeat', tintColor: WHITE }]} />
-         <View style={styles.topRow}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-               <Feather name="arrow-left" size={24} color={WHITE} />
-            </TouchableOpacity>
-            <View style={{ flex: 1, marginLeft: 15 }}>
-               <Text style={styles.headerTitle}>Detail Verifikasi</Text>
-               <Text style={styles.headerSubtitle}>{canteen.nama_kantin}</Text>
-            </View>
-         </View>
+        <Image source={require('../../../../assets/batik_cirebon.png')} style={[StyleSheet.absoluteFillObject, { opacity: 0.05, resizeMode: 'repeat', tintColor: WHITE }]} />
+        <View style={styles.topRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Feather name="arrow-left" size={24} color={WHITE} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, marginLeft: 15 }}>
+            <Text style={styles.headerTitle}>Detail Verifikasi</Text>
+            <Text style={styles.headerSubtitle}>{canteen.nama_kantin}</Text>
+          </View>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
-         {/* STATUS INDICATOR */}
-         <View style={styles.statusHero}>
-            <View style={[styles.statusCard, { backgroundColor: verifiedBySppg ? '#dcfce7' : '#fff7ed' }]}>
-               <Ionicons name={verifiedBySppg ? "shield-checkmark" : "time"} size={32} color={verifiedBySppg ? "#166534" : "#c2410c"} />
-               <View style={{ flex: 1, marginLeft: 15 }}>
-                  <Text style={[styles.statusTitle, { color: verifiedBySppg ? "#166534" : "#c2410c" }]}>
-                    {verifiedBySppg ? "Sertifikasi MBG Aktif" : "Menunggu Tinjauan SPPG"}
-                  </Text>
-                  <Text style={[styles.statusDesc, { color: verifiedBySppg ? "#15803d" : "#9a3412" }]}>
-                    {verifiedBySppg ? "Kantin sudah layak beroperasi penuh." : "Silakan periksa rangkuman di bawah."}
-                  </Text>
-               </View>
+        {/* STATUS INDICATOR */}
+        <View style={styles.statusHero}>
+          <View style={[styles.statusCard, { backgroundColor: verifiedBySppg ? '#dcfce7' : '#fff7ed' }]}>
+            <Ionicons name={verifiedBySppg ? "shield-checkmark" : "time"} size={32} color={verifiedBySppg ? "#166534" : "#c2410c"} />
+            <View style={{ flex: 1, marginLeft: 15 }}>
+              <Text style={[styles.statusTitle, { color: verifiedBySppg ? "#166534" : "#c2410c" }]}>
+                {verifiedBySppg ? "Sertifikasi MBG Aktif" : "Menunggu Tinjauan SPPG"}
+              </Text>
+              <Text style={[styles.statusDesc, { color: verifiedBySppg ? "#15803d" : "#9a3412" }]}>
+                {verifiedBySppg ? "Kantin sudah layak beroperasi penuh." : "Silakan periksa rangkuman di bawah."}
+              </Text>
             </View>
-         </View>
+          </View>
+        </View>
 
-         {/* SUMMARY SECTION */}
-         <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ringkasan Registrasi</Text>
-            <View style={styles.infoCard}>
-               <View style={styles.infoRow}><Text style={styles.infoLabel}>Pengelola</Text><Text style={styles.infoValue}>{canteen.pengelola}</Text></View>
-               <View style={styles.infoRow}><Text style={styles.infoLabel}>Sekolah Induk</Text><Text style={styles.infoValue}>{canteen.sekolah}</Text></View>
-               <View style={styles.divider} />
-               <Text style={styles.descP}>{canteen.desc}</Text>
-            </View>
-         </View>
+        {/* SUMMARY SECTION */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Ringkasan Registrasi</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}><Text style={styles.infoLabel}>Pengelola</Text><Text style={styles.infoValue}>{canteen.pengelola}</Text></View>
+            <View style={styles.infoRow}><Text style={styles.infoLabel}>Sekolah Induk</Text><Text style={styles.infoValue}>{canteen.sekolah}</Text></View>
+            <View style={styles.divider} />
+            <Text style={styles.descP}>{canteen.desc}</Text>
+          </View>
+        </View>
 
-         {/* PHOTO EVIDENCE */}
-         <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Dokumentasi Kelayakan</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoList}>
-               <View style={styles.photoBox}>
-                  <Image source={{ uri: canteen.foto_kantin }} style={styles.evidenceImg} />
-                  <View style={styles.photoLabel}><Text style={styles.photoLabelTxt}>AREA KANTIN</Text></View>
-               </View>
-               <View style={styles.photoBox}>
-                  <Image source={{ uri: canteen.foto_makanan }} style={styles.evidenceImg} />
-                  <View style={styles.photoLabel}><Text style={styles.photoLabelTxt}>SAMPEL MENU MBG</Text></View>
-               </View>
-            </ScrollView>
-         </View>
+        {/* PHOTO EVIDENCE */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Dokumentasi Kelayakan</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoList}>
+            <View style={styles.photoBox}>
+              <Image source={{ uri: canteen.foto_kantin }} style={styles.evidenceImg} />
+              <View style={styles.photoLabel}><Text style={styles.photoLabelTxt}>AREA KANTIN</Text></View>
+            </View>
+            <View style={styles.photoBox}>
+              <Image source={{ uri: canteen.foto_makanan }} style={styles.evidenceImg} />
+              <View style={styles.photoLabel}><Text style={styles.photoLabelTxt}>SAMPEL MENU MBG</Text></View>
+            </View>
+          </ScrollView>
+        </View>
 
-         {/* AUDIT TRAIL */}
-         <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Laporan Verifikasi Bertingkat</Text>
-            <View style={styles.auditItem}>
-               <View style={[styles.auditDot, { backgroundColor: canteen.verified_by_school ? '#10b981' : '#cbd5e1' }]} />
-               <View style={styles.auditLine} />
-               <View style={styles.auditContent}>
-                  <Text style={styles.auditRole}>Verifikasi Admin Sekolah</Text>
-                  <Text style={styles.auditStatus}>{canteen.verified_by_school ? 'DISETUJUI' : 'MENUNGGU'}</Text>
-                  <Text style={styles.auditMeta}>Audit kelayakan fisik harian</Text>
-               </View>
-               <Ionicons name={canteen.verified_by_school ? "checkmark-circle" : "hourglass-outline"} size={22} color={canteen.verified_by_school ? "#10b981" : "#94a3b8"} />
+        {/* AUDIT TRAIL */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Laporan Verifikasi Bertingkat</Text>
+          <View style={styles.auditItem}>
+            <View style={[styles.auditDot, { backgroundColor: canteen.verified_by_school ? '#10b981' : '#cbd5e1' }]} />
+            <View style={styles.auditLine} />
+            <View style={styles.auditContent}>
+              <Text style={styles.auditRole}>Verifikasi Admin Sekolah</Text>
+              <Text style={styles.auditStatus}>{canteen.verified_by_school ? 'DISETUJUI' : 'MENUNGGU'}</Text>
+              <Text style={styles.auditMeta}>Audit kelayakan fisik harian</Text>
             </View>
-            <View style={styles.auditItem}>
-               <View style={[styles.auditDot, { backgroundColor: verifiedBySppg ? '#3b82f6' : '#cbd5e1' }]} />
-               <View style={styles.auditContent}>
-                  <Text style={styles.auditRole}>Verifikasi Admin SPPG</Text>
-                  <Text style={styles.auditStatus}>{verifiedBySppg ? 'AKTIF' : 'MENUNGGU TINJAUAN'}</Text>
-                  <Text style={styles.auditMeta}>Audit standar nutrisi & sertifikasi</Text>
-               </View>
-               <Ionicons name={verifiedBySppg ? "checkmark-circle" : "eye-outline"} size={22} color={verifiedBySppg ? "#3b82f6" : "#94a3b8"} />
+            <Ionicons name={canteen.verified_by_school ? "checkmark-circle" : "hourglass-outline"} size={22} color={canteen.verified_by_school ? "#10b981" : "#94a3b8"} />
+          </View>
+          <View style={styles.auditItem}>
+            <View style={[styles.auditDot, { backgroundColor: verifiedBySppg ? '#3b82f6' : '#cbd5e1' }]} />
+            <View style={styles.auditContent}>
+              <Text style={styles.auditRole}>Verifikasi Admin SPPG</Text>
+              <Text style={styles.auditStatus}>{verifiedBySppg ? 'AKTIF' : 'MENUNGGU TINJAUAN'}</Text>
+              <Text style={styles.auditMeta}>Audit standar nutrisi & sertifikasi</Text>
             </View>
-         </View>
+            <Ionicons name={verifiedBySppg ? "checkmark-circle" : "eye-outline"} size={22} color={verifiedBySppg ? "#3b82f6" : "#94a3b8"} />
+          </View>
+        </View>
       </ScrollView>
 
       {/* ACTION FOOTER */}
       {!verifiedBySppg && (
         <View style={styles.footer}>
-           <TouchableOpacity 
-             style={[styles.verifyBtn, !canteen.verified_by_school && { opacity: 0.6 }]} 
-             onPress={handleVerify}
-             disabled={loading}
-           >
-              {loading ? <ActivityIndicator color={WHITE} /> : (
-                <>
-                  <MaterialCommunityIcons name="clipboard-check" size={24} color={WHITE} />
-                  <Text style={styles.verifyBtnTxt}>Verifikasi Layak MBG</Text>
-                </>
-              )}
-           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.verifyBtn, !canteen.verified_by_school && { opacity: 0.6 }]}
+            onPress={handleVerify}
+            disabled={loading}
+          >
+            {loading ? <ActivityIndicator color={WHITE} /> : (
+              <>
+                <MaterialCommunityIcons name="clipboard-check" size={24} color={WHITE} />
+                <Text style={styles.verifyBtnTxt}>Verifikasi Layak MBG</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
       )}
     </SafeAreaView>

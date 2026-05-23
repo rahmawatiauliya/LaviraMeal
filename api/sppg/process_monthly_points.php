@@ -6,6 +6,33 @@ header('Content-Type: application/json');
 $currentMonth = date('m-Y');
 
 try {
+    // Pastikan tabel scheduled_points ada sebelum query
+    $db->exec("CREATE TABLE IF NOT EXISTS scheduled_points (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sekolah_id CHAR(36) NOT NULL,
+        monthly_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+        distribution_day INT NOT NULL DEFAULT 1,
+        last_distributed DATE DEFAULT NULL,
+        status ENUM('active', 'inactive') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_sekolah (sekolah_id)
+    )");
+
+    try {
+        $db->exec("ALTER TABLE scheduled_points ADD COLUMN status ENUM('active', 'inactive') DEFAULT 'active'");
+    } catch (Exception $e) {
+        // Abaikan error jika kolom sudah ada
+    }
+
+    // Pastikan tabel point_distribution_logs ada
+    $db->exec("CREATE TABLE IF NOT EXISTS point_distribution_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        month_year VARCHAR(20) NOT NULL,
+        total_schools INT NOT NULL DEFAULT 0,
+        total_points DECIMAL(15,2) NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
     $db->beginTransaction();
 
     // 1. Ambil semua sekolah yang memiliki jadwal poin bulanan
@@ -75,7 +102,7 @@ try {
     if ($db->inTransaction()) {
         $db->rollBack();
     }
-    http_response_code(500);
+    http_response_code(200);
     echo json_encode(["status" => "error", "message" => "Gagal memproses distribusi: " . $e->getMessage()]);
 }
 ?>

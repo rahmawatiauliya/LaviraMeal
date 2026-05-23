@@ -11,7 +11,9 @@ import {
   useWindowDimensions,
   Linking,
   RefreshControl,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  TextInput
 } from 'react-native';
 import apiClient from '../../../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,6 +31,14 @@ export default function DetailSekolahScreen({ route, navigation }) {
   const [schoolData, setSchoolData] = useState(sekolah);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Transfer State
+  const [transferModal, setTransferModal] = useState(false);
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
+
+  // Collapsible State
+  const [showTeachers, setShowTeachers] = useState(false);
 
   const fetchSchoolDetail = useCallback(async (isRefresh = false) => {
     try {
@@ -83,6 +93,42 @@ export default function DetailSekolahScreen({ route, navigation }) {
     if (!name || name === 'Belum Diatur') return 'Belum Diatur';
     // Hapus awalan Admin, Kepala, atau PLT jika ada untuk tampilan lebih bersih
     return name.replace(/^(Admin|Kepala|PLT|Admin Sekolah)\s+/i, '');
+  };
+
+  const handleInstantTransfer = async () => {
+    const amount = parseInt(transferAmount);
+    if (!amount || amount <= 0) {
+      Alert.alert("Input Tidak Valid", "Silakan masukkan nominal poin yang akan dikirim.");
+      return;
+    }
+    
+    setTransferLoading(true);
+    try {
+      const userDataStr = await AsyncStorage.getItem('user_data');
+      if (!userDataStr) return;
+      const userData = JSON.parse(userDataStr);
+
+      const payload = {
+        sppg_id: userData.sppg_id,
+        sekolah_id: sekolah.id,
+        nominal: amount
+      };
+
+      const response = await apiClient.post('sppg/sppg_transfer_dana.php', payload);
+      if (response.data && response.data.status === 'success') {
+        Alert.alert("Berhasil", "Poin sebesar " + amount.toLocaleString('id-ID') + " PTS telah dikirim ke " + (schoolData?.nama_sekolah || "Sekolah"));
+        setTransferModal(false);
+        setTransferAmount('');
+        fetchSchoolDetail(true);
+      } else {
+        Alert.alert("Gagal", response.data.message || "Gagal mengirim poin.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Koneksi ke server bermasalah.");
+      console.error(error);
+    } finally {
+      setTransferLoading(false);
+    }
   };
 
   return (
@@ -170,10 +216,16 @@ export default function DetailSekolahScreen({ route, navigation }) {
                 <Text style={styles.bValue}>{(schoolData?.saldo || 0).toLocaleString('id-ID')} PTS</Text>
                 <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '600', marginTop: 4 }}>*1 Point = Rp 15.000</Text>
               </View>
-              <TouchableOpacity style={styles.auditBtn} onPress={() => navigation.navigate('AturJadwalPoin', { sekolah: schoolData })}>
-                <Ionicons name="calendar" size={18} color={BLUE_PRIMARY} />
-                <Text style={styles.auditText}>Atur Jadwal</Text>
-              </TouchableOpacity>
+              <View style={{ gap: 8 }}>
+                <TouchableOpacity style={[styles.auditBtn, { backgroundColor: '#E0F2FE' }]} onPress={() => setTransferModal(true)}>
+                  <Ionicons name="send" size={18} color="#0284C7" />
+                  <Text style={[styles.auditText, { color: '#0284C7' }]}>Kirim Instan</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.auditBtn} onPress={() => navigation.navigate('AturJadwalPoin', { sekolah: schoolData })}>
+                  <Ionicons name="calendar" size={18} color={BLUE_PRIMARY} />
+                  <Text style={styles.auditText}>Atur Jadwal</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.progressSection}>
@@ -230,6 +282,56 @@ export default function DetailSekolahScreen({ route, navigation }) {
           </View>
         </View>
 
+        {/* REGISTERED TEACHERS */}
+        <View style={styles.section}>
+          <TouchableOpacity 
+            style={styles.dropdownHeader} 
+            onPress={() => setShowTeachers(!showTeachers)}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={styles.dropdownIconBox}>
+                <Ionicons name="people" size={18} color={BLUE_PRIMARY} />
+              </View>
+              <Text style={styles.sectionTitleDropdown}>Guru Terdaftar ({schoolData?.guru_list?.length || 0})</Text>
+            </View>
+            <Ionicons name={showTeachers ? "chevron-up" : "chevron-down"} size={20} color="#64748B" />
+          </TouchableOpacity>
+
+          {showTeachers && (
+            <View style={{ marginTop: 12 }}>
+              {schoolData?.guru_list && schoolData.guru_list.length > 0 ? (
+                <View style={styles.teachersCard}>
+                  {schoolData.guru_list.map((guru, index) => (
+                    <View key={guru.id || index}>
+                      <View style={styles.teacherRow}>
+                        <View style={styles.teacherIconBox}>
+                          <Ionicons name="person" size={18} color={BLUE_PRIMARY} />
+                        </View>
+                        <View style={styles.teacherInfo}>
+                          <Text style={styles.teacherName}>{guru.nama}</Text>
+                          <Text style={styles.teacherSub}>{guru.mata_pelajaran || 'Guru Kelas'} • NIP: {guru.nip || '-'}</Text>
+                        </View>
+                        <View style={[styles.teacherStatusBadge, { backgroundColor: parseInt(guru.is_active) === 1 ? '#ECFDF5' : '#FEF2F2' }]}>
+                          <Text style={[styles.teacherStatusText, { color: parseInt(guru.is_active) === 1 ? '#10B981' : '#EF4444' }]}>
+                            {parseInt(guru.is_active) === 1 ? 'Aktif' : 'Nonaktif'}
+                          </Text>
+                        </View>
+                      </View>
+                      {index < schoolData.guru_list.length - 1 && <View style={styles.teacherDivider} />}
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.emptyCard}>
+                  <Ionicons name="people-outline" size={32} color="#94A3B8" style={{ marginBottom: 8 }} />
+                  <Text style={styles.emptyText}>Belum ada guru terdaftar di sekolah ini.</Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* FINAL ACTIONS */}
         <View style={styles.bottomActions}>
           <TouchableOpacity style={styles.primaryBtn} onPress={() => fetchSchoolDetail()} disabled={loading}>
@@ -246,6 +348,47 @@ export default function DetailSekolahScreen({ route, navigation }) {
         </View>
 
       </ScrollView>
+
+      {/* INSTANT TRANSFER MODAL */}
+      <Modal visible={transferModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kirim Poin Instan</Text>
+              <TouchableOpacity onPress={() => setTransferModal(false)}>
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSub}>Kirim poin ke: <Text style={{fontWeight: 'bold', color: BLUE_PRIMARY}}>{schoolData?.nama_sekolah}</Text></Text>
+            
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputPrefix}>PTS</Text>
+              <TextInput 
+                style={styles.modalInput}
+                keyboardType="numeric"
+                placeholder="0"
+                value={transferAmount}
+                onChangeText={setTransferAmount}
+                autoFocus
+              />
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.primaryBtn, { height: 55, marginTop: 10 }]} 
+              onPress={handleInstantTransfer}
+              disabled={transferLoading}
+            >
+              {transferLoading ? <ActivityIndicator color={WHITE} /> : (
+                <>
+                  <Ionicons name="send" size={20} color={WHITE} />
+                  <Text style={styles.primaryBtnText}>KIRIM SEKARANG</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -306,4 +449,32 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: WHITE, fontSize: 14, fontWeight: '900' },
   secondaryBtn: { height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#E2E8F0' },
   secondaryBtnText: { color: '#64748B', fontSize: 13, fontWeight: 'bold' },
+
+  // MODAL STYLES
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'center', padding: 20 },
+  modalContainer: { backgroundColor: WHITE, borderRadius: 28, padding: 25, elevation: 20, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 30 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  modalTitle: { fontSize: 18, fontWeight: '900', color: BLUE_PRIMARY },
+  modalSub: { fontSize: 13, color: '#64748B', marginBottom: 25 },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: '#E2E8F0', borderRadius: 20, paddingHorizontal: 20, height: 70, marginBottom: 25 },
+  inputPrefix: { fontSize: 16, fontWeight: 'bold', color: '#94A3B8', marginRight: 15 },
+  modalInput: { flex: 1, fontSize: 28, fontWeight: '900', color: BLUE_PRIMARY },
+
+  // TEACHER LIST STYLES
+  teachersCard: { backgroundColor: WHITE, borderRadius: 25, padding: 25, elevation: 3, gap: 15 },
+  teacherRow: { flexDirection: 'row', alignItems: 'center', gap: 15 },
+  teacherIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F0F4F8', justifyContent: 'center', alignItems: 'center' },
+  teacherInfo: { flex: 1 },
+  teacherName: { fontSize: 14, fontWeight: 'bold', color: '#1E293B' },
+  teacherSub: { fontSize: 11, color: '#94A3B8', marginTop: 2, fontWeight: '600' },
+  teacherStatusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  teacherStatusText: { fontSize: 10, fontWeight: 'bold' },
+  teacherDivider: { height: 1, backgroundColor: '#F1F5F9' },
+  emptyCard: { backgroundColor: WHITE, borderRadius: 25, padding: 30, alignItems: 'center', elevation: 3 },
+  emptyText: { fontSize: 13, color: '#94A3B8', fontWeight: 'bold', textAlign: 'center' },
+
+  // COLLAPSIBLE DROPDOWN STYLES
+  dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: WHITE, borderRadius: 20, padding: 18, elevation: 3, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
+  dropdownIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center' },
+  sectionTitleDropdown: { fontSize: 14, fontWeight: 'bold', color: '#1E293B' },
 });

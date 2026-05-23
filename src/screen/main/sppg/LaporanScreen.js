@@ -73,7 +73,7 @@ export default function LaporanScreen({ navigation }) {
           nama: t.sekolah || 'Sekolah',
           sub: `${t.metode || 'Auto'} · ${t.tanggal_format || '-'}`,
           amount: `${Number(t.nominal || 0)}`,
-          status: t.status === 'Success' || t.status === 'Berhasil' ? 'Berhasil' : 'Menunggu'
+          status: 'Berhasil'
         })) || []);
 
         setVerifikasiData(data.riwayat?.map(r => ({
@@ -216,36 +216,7 @@ export default function LaporanScreen({ navigation }) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           
-          <View style={styles.metricsGrid}>
-            <View style={styles.metricCard}>
-              <View style={[styles.iconBox, { backgroundColor: '#EEF2FF' }]}>
-                <Ionicons name="star" size={20} color="#4F46E5" />
-              </View>
-              <Text style={styles.metricVal}>{stats.point}</Text>
-              <Text style={styles.metricLab}>Point Didistribusikan</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <View style={[styles.iconBox, { backgroundColor: '#FFF7ED' }]}>
-                <Ionicons name="shield-checkmark" size={20} color="#F59E0B" />
-              </View>
-              <Text style={styles.metricVal}>{stats.verif}</Text>
-              <Text style={styles.metricLab}>Kantin Diverifikasi</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <View style={[styles.iconBox, { backgroundColor: '#FAF5FF' }]}>
-                <Ionicons name="business" size={20} color="#8B5CF6" />
-              </View>
-              <Text style={styles.metricVal}>{stats.aktif}</Text>
-              <Text style={styles.metricLab}>Sekolah Aktif</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <View style={[styles.iconBox, { backgroundColor: '#F0FDF4' }]}>
-                <Ionicons name="grid" size={20} color="#10B981" />
-              </View>
-              <Text style={styles.metricVal}>{stats.total}</Text>
-              <Text style={styles.metricLab}>Total Sekolah</Text>
-            </View>
-          </View>
+
 
           {/* DISTRIBUSI POINT */}
           <View style={styles.section}>
@@ -281,42 +252,7 @@ export default function LaporanScreen({ navigation }) {
             </View>
           </View>
 
-          {/* VERIFIKASI KANTIN */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Verifikasi Kantin</Text>
-              <TouchableOpacity style={styles.miniExcel} onPress={() => handlePreview('verifikasi')}>
-                <Feather name="eye" size={12} color={WHITE} />
-                <Text style={styles.miniExcelText}>Preview</Text>
-              </TouchableOpacity>
-            </View>
 
-            <View style={styles.listContainer}>
-              {verifikasiData.slice(0, 2).map((item) => (
-                <View key={item.id} style={styles.listItem}>
-                  <View style={[styles.listIconBox, { backgroundColor: item.status === 'Disetujui' ? '#ECFDF5' : '#FFF7ED' }]}>
-                    <Ionicons 
-                      name={item.status === 'Disetujui' ? "shield-checkmark" : "time"} 
-                      size={20} 
-                      color={item.status === 'Disetujui' ? '#10B981' : '#F59E0B'} 
-                    />
-                  </View>
-                  <View style={styles.listBody}>
-                    <Text style={styles.listTitle}>{item.nama}</Text>
-                    <Text style={styles.listSub}>{item.sub}</Text>
-                  </View>
-                  <View style={styles.listTail}>
-                    <View style={[styles.badge, { backgroundColor: item.status === 'Disetujui' ? '#ECFDF5' : '#FFF7ED' }]}>
-                      <Text style={[styles.badgeText, { color: item.status === 'Disetujui' ? '#10B981' : '#F59E0B' }]}>{item.status}</Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
-              <TouchableOpacity style={styles.seeAll} onPress={() => navigation.navigate('PersetujuanRegistrasi')}>
-                <Text style={styles.seeAllText}>Lihat semua →</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </ScrollView>
       </View>
 

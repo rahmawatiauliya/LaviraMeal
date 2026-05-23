@@ -101,6 +101,8 @@ export default function AturJadwalPoinScreen({ navigation }) {
                     
                     if (distResponse.data.status === 'success') {
                         Alert.alert("Distribusi Berhasil", `Jadwal disimpan dan Poin langsung dikirim secara real-time ke ${school.nama_sekolah}!`);
+                    } else if (distResponse.data.status === 'error') {
+                        Alert.alert("Gagal Distribusi Otomatis", distResponse.data.message || "Gagal memproses pengiriman bulan ini.");
                     } else {
                         Alert.alert("Jadwal Tersimpan", "Jadwal berhasil diperbarui. Poin akan dikirim otomatis oleh sistem pada tanggal tersebut.");
                     }
@@ -110,6 +112,8 @@ export default function AturJadwalPoinScreen({ navigation }) {
                 
                 // Refresh data untuk update UI (Checklist Hijau)
                 fetchSchools();
+            } else {
+                Alert.alert("Gagal Menyimpan Jadwal", response.data.message || "Terjadi kesalahan pada database.");
             }
         } catch (error) {
             console.error(error);

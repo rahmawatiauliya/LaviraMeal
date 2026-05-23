@@ -13,7 +13,7 @@ if (!$sekolah_id || !$nama_kelas) {
 try {
     // Ambil semua siswa di sekolah ini yang berada di kelas tertentu
     $query = "
-        SELECT s.id, s.nama, s.nis, s.jenis_kelamin, s.aktif, g.nama as nama_guru
+        SELECT s.id, s.nama, s.nis, s.jenis_kelamin, s.is_active as aktif, g.nama as nama_guru
         FROM siswa s
         LEFT JOIN guru g ON s.guru_id = g.id
         WHERE s.sekolah_id = ? AND s.kelas = ? 

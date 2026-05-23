@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../../../api/client';
 import * as ImagePicker from 'expo-image-picker';
@@ -35,14 +36,15 @@ export default function ProfilScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState({
-    nama: 'Admin Otoritas',
-    email: 'admin@sppg.id',
+    nama: 'Memuat...',
+    email: '',
     role: 'sppg',
-    nama_lembaga: 'SPPG PUSAT',
-    jabatan: 'Administrator Wilayah',
-    nip: 'SPPG-2026-001'
+    displayLembaga: 'Memuat...',
+    displayJabatan: 'Memuat...',
+    nip: '',
+    region: 'Memuat...'
   });
-  
+
   const [profileImage, setProfileImage] = useState(null);
   const [pinModal, setPinModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -53,10 +55,12 @@ export default function ProfilScreen({ navigation }) {
   const [isChangingPin, setIsChangingPin] = useState(false);
   const [showPins, setShowPins] = useState(false);
 
-  useEffect(() => {
-    loadUserData();
-    AsyncStorage.getItem('@profile_image').then(img => img && setProfileImage(img));
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+      AsyncStorage.getItem('@profile_image').then(img => img && setProfileImage(img));
+    }, [])
+  );
 
   const loadUserData = async () => {
     try {
@@ -66,8 +70,9 @@ export default function ProfilScreen({ navigation }) {
         setUserData(prev => ({
           ...prev,
           ...parsed,
-          displayLembaga: parsed.nama_lembaga || parsed.displayLembaga || 'SPPG PUSAT',
-          displayJabatan: parsed.jabatan || parsed.displayJabatan || 'Administrator Sistem'
+          displayLembaga: parsed.role === 'siswa' || parsed.role === 'guru' ? (parsed.nama_sekolah || 'LAVIRA MEAL') : (parsed.nama_lembaga || 'SPPG PUSAT'),
+          displayJabatan: parsed.role === 'siswa' ? `Kelas ${parsed.kelas || 'Umum'}` : (parsed.role === 'guru' ? (parsed.jabatan || 'Guru Wali Kelas') : (parsed.jabatan || 'Administrator Sistem')),
+          region: parsed.kota ? `${parsed.kota}, ${parsed.provinsi}` : 'Kab. Karawang, Jawa Barat'
         }));
       }
     } catch (e) { console.error('Error loading user data:', e); }
@@ -101,8 +106,8 @@ export default function ProfilScreen({ navigation }) {
       "Apakah Anda yakin ingin mengakhiri sesi ini?",
       [
         { text: "Batal", style: "cancel" },
-        { 
-          text: "Keluar", 
+        {
+          text: "Keluar",
           style: "destructive",
           onPress: async () => {
             await AsyncStorage.removeItem('user_data');
@@ -110,7 +115,7 @@ export default function ProfilScreen({ navigation }) {
               index: 0,
               routes: [{ name: 'Login' }],
             });
-          } 
+          }
         }
       ]
     );
@@ -119,6 +124,10 @@ export default function ProfilScreen({ navigation }) {
   const handleChangePin = async () => {
     if (!oldPin || !newPin || !confirmPin) {
       Alert.alert("Gagal", "Silakan lengkapi semua data pengamanan.");
+      return;
+    }
+    if (newPin.length < 8) {
+      Alert.alert("Gagal", "Sandi baru minimal harus 8 karakter.");
       return;
     }
     if (newPin !== confirmPin) {
@@ -156,411 +165,513 @@ export default function ProfilScreen({ navigation }) {
 
     try {
       setLoading(true);
-      // Simpan ke AsyncStorage
-      const newData = { ...userData, ...editedData };
-      await AsyncStorage.setItem('user_data', JSON.stringify(newData));
-      setUserData(newData);
-      setEditModal(false);
-      Alert.alert("Berhasil", "Data profil telah diperbarui secara lokal.");
+      const response = await apiClient.post('auth/update_profile.php', {
+        id: userData.id,
+        role: userData.role,
+        sppg_id: userData.sppg_id,
+        nama: editedData.nama,
+        email: editedData.email,
+        nama_lembaga: editedData.nama_lembaga || editedData.displayLembaga,
+        jabatan: editedData.jabatan,
+        nip: editedData.nip
+      });
+
+      if (response.data.status === 'success') {
+        const newData = {
+          ...userData,
+          ...editedData,
+          nama_lembaga: editedData.nama_lembaga || editedData.displayLembaga,
+        };
+
+        await AsyncStorage.setItem('user_data', JSON.stringify(newData));
+        setUserData(newData);
+        setEditModal(false);
+        Alert.alert("Berhasil", "Data profil telah diperbarui secara permanen.");
+      } else {
+        Alert.alert("Gagal", response.data.message || "Gagal memperbarui profil di server.");
+      }
     } catch (error) {
-      Alert.alert("Error", "Gagal menyimpan perubahan.");
+      console.error(error);
+      Alert.alert("Error", "Gagal menghubungi server untuk menyimpan perubahan.");
     } finally {
       setLoading(false);
     }
   };
 
-  const renderInfoCard = (label, value, icon, color) => (
-    <View style={styles.infoCard}>
-      <View style={[styles.infoIconBox, { backgroundColor: color + '15' }]}>
-        <Ionicons name={icon} size={20} color={color} />
-      </View>
-      <View style={styles.infoContent}>
-        <Text style={styles.infoLabelText}>{label}</Text>
-        <Text style={styles.infoValueText}>{value}</Text>
-      </View>
-    </View>
-  );
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
-        {/* PREMIUM HEADER HERO */}
-        <View style={styles.headerHero}>
-           <ImageBackground 
-             source={require('../../../../assets/batik_cirebon.png')} 
-             style={styles.batikHeader}
-             imageStyle={{ opacity: 0.15, resizeMode: 'repeat' }}
-           >
-             <SafeAreaView style={styles.safeHeader}>
-                <View style={styles.headerTop}>
-                   <TouchableOpacity onPress={() => navigation.goBack()}>
-                      <Ionicons name="arrow-back" size={24} color={WHITE} />
-                   </TouchableOpacity>
-                   <Text style={styles.headerMainTitle}>PROFIL AKUN</Text>
-                   <TouchableOpacity onPress={handleLogout}>
-                      <Ionicons name="log-out-outline" size={24} color={WHITE} />
-                   </TouchableOpacity>
-                </View>
 
-                <View style={styles.profileSection}>
-                   <TouchableOpacity style={styles.avatarWrapper} onPress={pickImage}>
-                      <View style={styles.avatarFrame}>
-                         {profileImage ? (
-                           <Image source={{ uri: profileImage }} style={styles.avatarImg} />
-                         ) : (
-                           <View style={styles.avatarPlaceholder}>
-                             <Text style={styles.avatarInitial}>{userData.nama?.[0] || 'A'}</Text>
-                           </View>
-                         )}
-                      </View>
-                      <View style={styles.editBadge}>
-                         <Ionicons name="camera" size={14} color={WHITE} />
-                      </View>
-                   </TouchableOpacity>
-                   <Text style={styles.profileName}>{userData.nama}</Text>
-                   <View style={styles.badgeRow}>
-                      <View style={styles.premiumBadge}>
-                         <MaterialCommunityIcons name="shield-check" size={12} color={BLUE_ACCENT} />
-                         <Text style={styles.premiumBadgeText}>{userData.role?.toUpperCase()}</Text>
-                      </View>
-                      <TouchableOpacity 
-                        style={styles.editActionBtn}
-                        onPress={() => {
-                          setEditedData({ 
-                            nama: userData.nama, 
-                            email: userData.email, 
-                            jabatan: userData.displayJabatan,
-                            nip: userData.nip 
-                          });
-                          setEditModal(true);
-                        }}
-                      >
-                         <Feather name="edit-3" size={12} color={WHITE} />
-                         <Text style={styles.editActionText}>Edit Data</Text>
-                      </TouchableOpacity>
-                   </View>
-                </View>
-             </SafeAreaView>
-           </ImageBackground>
-        </View>
-
-        {/* IDENTITY CARD - DIGITAL ID STYLE */}
-        <View style={styles.cardWrapper}>
-           <View style={styles.digitalIdCard}>
-              <View style={styles.idCardHeader}>
-                 <View>
-                    <Text style={styles.idLembaga}>{userData.displayLembaga}</Text>
-                    <Text style={styles.idSystem}>
-                      {userData.role === 'kantin' ? 'LaviraMeal Merchant Partner' : 
-                       userData.role === 'siswa' ? 'LaviraMeal Student Card' : 
-                       'LaviraMeal Authority System'}
-                    </Text>
-                 </View>
-                 <MaterialCommunityIcons name="integrated-circuit-chip" size={36} color={ACCENT_YELLOW} />
-              </View>
-              
-              <View style={styles.idDivider} />
-
-              <View style={styles.idDetails}>
-                 <View style={styles.idField}>
-                    <Text style={styles.idLabel}>
-                      {userData.role === 'kantin' ? 'KODE IDENTITAS KANTIN' : 
-                       userData.role === 'siswa' ? 'NOMOR INDUK SISWA (NIS)' : 
-                       'NOMOR INDUK PEGAWAI (NIP)'}
-                    </Text>
-                    <Text style={styles.idValue}>{userData.username || userData.nip || 'N/A'}</Text>
-                 </View>
-                 <View style={styles.idField}>
-                    <Text style={styles.idLabel}>JABATAN STRUKTUR</Text>
-                    <Text style={styles.idValue}>{userData.displayJabatan}</Text>
-                 </View>
-              </View>
-
-              <View style={styles.idFooter}>
-                 <View style={styles.footerInfo}>
-                    <Text style={styles.idLabel}>STATUS</Text>
-                    <View style={styles.statusRow}>
-                       <View style={styles.activeDot} />
-                       <Text style={styles.statusText}>AKTIF & TERVERIFIKASI</Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 150 }}
+      >
+        <View style={styles.heroSection}>
+          <ImageBackground
+            source={require('../../../../assets/batik_cirebon.png')}
+            style={styles.heroBatik}
+            imageStyle={{ opacity: 0.04, resizeMode: 'repeat' }}
+          >
+            <View style={styles.profileMaster}>
+              <TouchableOpacity style={styles.mainAvatarWrap} onPress={pickImage}>
+                <View style={styles.avatarGlow} />
+                <View style={styles.avatarBorder}>
+                  {profileImage ? (
+                    <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={styles.initialsBox}>
+                      <Text style={styles.initialsTxt}>{userData.nama?.[0] || 'A'}</Text>
                     </View>
-                 </View>
-                 <Image 
-                   source={require('../../../../assets/batik_cirebon.png')} 
-                   style={styles.watermark} 
-                 />
+                  )}
+                </View>
+                <View style={styles.editCamBadge}>
+                  <Ionicons name="camera" size={12} color={WHITE} />
+                </View>
+              </TouchableOpacity>
+
+              <Text style={styles.masterName}>{userData.nama}</Text>
+              <View style={styles.roleBadge}>
+                <Text style={styles.roleBadgeTxt}>
+                  {userData.role === 'siswa' ? 'SISWA' : (userData.role === 'guru' ? 'GURU' : 'ADMIN SPPG PUSAT')}
+                </Text>
               </View>
-           </View>
+            </View>
+          </ImageBackground>
         </View>
 
-        {/* ACCOUNT INFO SECTION */}
-        <View style={styles.section}>
-           <Text style={styles.sectionHeading}>INFORMASI AKUN</Text>
-           {renderInfoCard('Alamat Email', userData.email || '-', 'mail-outline', BLUE_ACCENT)}
-           {renderInfoCard('ID Pengguna', userData.id || 'N/A', 'finger-print-outline', ACCENT_GREEN)}
+        <View style={styles.idCardWrapper}>
+          <View style={styles.premiumCard}>
+            <View style={styles.cardPattern} />
+            <View style={styles.cardAura} />
+
+            <View style={styles.cardHeaderArea}>
+              <View>
+                <Text style={styles.cardTag}>{userData.role === 'siswa' ? 'KARTU AKSES SISWA' : (userData.role === 'guru' ? 'KARTU AKSES GURU' : 'KARTU IDENTITAS SISTEM')}</Text>
+                <Text style={styles.cardInstitution}>{userData.role === 'siswa' || userData.role === 'guru' ? (userData.nama_sekolah || 'LAVIRA MEAL') : userData.displayLembaga}</Text>
+              </View>
+              <View style={styles.digitalSeal}>
+                <MaterialCommunityIcons name="security" size={28} color="rgba(255,255,255,0.2)" />
+              </View>
+            </View>
+
+            <View style={styles.cardMainInfo}>
+              <View style={styles.infoCol}>
+                <View style={styles.idItemBox}>
+                  <Text style={styles.idItemLabel}>{userData.role === 'siswa' ? 'NIS (NOMOR INDUK SISWA)' : (userData.role === 'guru' ? 'NIP (NOMOR INDUK PEGAWAI)' : 'IDENTIFIKASI UNIK')}</Text>
+                  <Text style={styles.idItemVal}>{userData.role === 'siswa' ? (userData.nis || userData.username) : (userData.username || userData.nip || 'N/A')}</Text>
+                </View>
+                <View style={styles.idItemBox}>
+                  <Text style={styles.idItemLabel}>{userData.role === 'siswa' ? 'KELAS' : (userData.role === 'guru' ? 'JABATAN GURU' : 'JABATAN OTORITAS')}</Text>
+                  <Text style={styles.idItemVal}>{userData.role === 'siswa' ? (userData.kelas || 'Umum') : userData.displayJabatan}</Text>
+                </View>
+              </View>
+
+              <View style={styles.cardBarcodeArea}>
+                <View style={styles.barcodeBox}>
+                  <Ionicons name="qr-code-outline" size={55} color="rgba(255,255,255,0.7)" />
+                </View>
+                <Text style={styles.barcodeLabel}>{userData.role === 'siswa' ? 'ID SISWA' : (userData.role === 'guru' ? 'ID GURU' : 'ID AMAN')}</Text>
+              </View>
+            </View>
+
+            <View style={styles.cardBottomBar}>
+              <View style={styles.validityBox}>
+                <Text style={styles.idItemLabel}>AUTENTIKASI</Text>
+                <View style={styles.authRow}>
+                  <View style={styles.greenPulse} />
+                  <Text style={styles.authStatus}>{userData.role === 'siswa' ? 'SISWA AKTIF' : 'TERVERIFIKASI PENUH'}</Text>
+                </View>
+              </View>
+              <View style={styles.digitalSignature}>
+                <Text style={styles.signatureName}>{userData.nama}</Text>
+                <Text style={styles.signatureSubtitle}>{userData.role === 'siswa' ? 'IDENTITAS DIGITAL' : 'TANDA TANGAN DIGITAL'}</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
-        {/* SETTINGS SECTION */}
-        <View style={styles.section}>
-           <Text style={styles.sectionHeading}>KEAMANAN & PENGATURAN</Text>
-           <View style={styles.menuContainer}>
-              <TouchableOpacity style={styles.menuItem} onPress={() => setPinModal(true)}>
-                 <View style={[styles.menuIconBox, { backgroundColor: '#EEF2FF' }]}>
-                    <Ionicons name="lock-closed-outline" size={20} color="#4F46E5" />
-                 </View>
-                 <Text style={styles.menuText}>Ubah PIN Pengamanan</Text>
-                 <Ionicons name="chevron-forward" size={20} color={BORDER_LIGHT} />
-              </TouchableOpacity>
+        <View style={styles.tilesContainer}>
+          <Text style={styles.sectionTitleTxt}>PENGATURAN AKUN</Text>
+          <View style={styles.tilesRow}>
+            <TouchableOpacity
+              style={styles.premiumTile}
+              onPress={() => {
+                setEditedData({
+                  nama: userData.nama,
+                  email: userData.email,
+                  jabatan: userData.displayJabatan,
+                  nip: userData.nip,
+                  nama_lembaga: userData.nama_lembaga || userData.displayLembaga
+                });
+                setEditModal(true);
+              }}
+            >
+              <View style={[styles.tileIconBox, { backgroundColor: '#F0F9FF' }]}>
+                <Feather name="user" size={20} color="#0EA5E9" />
+              </View>
+              <Text style={styles.tileMainTxt}>Info Pribadi</Text>
+              <Text style={styles.tileSubTxt}>Update identitas</Text>
+            </TouchableOpacity>
 
-              <View style={styles.menuDivider} />
+            <TouchableOpacity style={styles.premiumTile} onPress={() => setPinModal(true)}>
+              <View style={[styles.tileIconBox, { backgroundColor: '#F0FDF4' }]}>
+                <Feather name="lock" size={20} color="#22C55E" />
+              </View>
+              <Text style={styles.tileMainTxt}>Akses & Sandi</Text>
+              <Text style={styles.tileSubTxt}>Kode keamanan</Text>
+            </TouchableOpacity>
+          </View>
 
-              <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert("Pusat Bantuan", "Hubungi admin IT LaviraMeal untuk bantuan teknis.")}>
-                 <View style={[styles.menuIconBox, { backgroundColor: '#ECFDF5' }]}>
-                    <Ionicons name="help-buoy-outline" size={20} color={ACCENT_GREEN} />
-                 </View>
-                 <Text style={styles.menuText}>Bantuan & Dukungan</Text>
-                 <Ionicons name="chevron-forward" size={20} color={BORDER_LIGHT} />
-              </TouchableOpacity>
+          <View style={[styles.tilesRow, { marginTop: 15 }]}>
+            <TouchableOpacity style={styles.premiumTile} onPress={() => Alert.alert("Dukungan", "Menghubungi Lavira Helpdesk...")}>
+              <View style={[styles.tileIconBox, { backgroundColor: '#F5F3FF' }]}>
+                <Feather name="help-circle" size={20} color="#8B5CF6" />
+              </View>
+              <Text style={styles.tileMainTxt}>Pusat Bantuan</Text>
+              <Text style={styles.tileSubTxt}>Tiket dukungan</Text>
+            </TouchableOpacity>
 
-              <View style={styles.menuDivider} />
-
-              <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert("Privasi", "Data anda dienkripsi menggunakan standar AES-256.")}>
-                 <View style={[styles.menuIconBox, { backgroundColor: '#FFF7ED' }]}>
-                    <Ionicons name="shield-checkmark-outline" size={20} color={ACCENT_YELLOW} />
-                 </View>
-                 <Text style={styles.menuText}>Kebijakan Privasi</Text>
-                 <Ionicons name="chevron-forward" size={20} color={BORDER_LIGHT} />
-              </TouchableOpacity>
-           </View>
-
-           <TouchableOpacity style={styles.dangerBtn} onPress={handleLogout}>
-              <Ionicons name="power" size={20} color={WHITE} />
-              <Text style={styles.dangerBtnText}>KELUAR</Text>
-           </TouchableOpacity>
+            <TouchableOpacity style={styles.premiumTile} onPress={() => Alert.alert("Privasi", "Enkripsi end-to-end aktif.")}>
+              <View style={[styles.tileIconBox, { backgroundColor: '#FFFBEB' }]}>
+                <Feather name="shield" size={20} color="#F59E0B" />
+              </View>
+              <Text style={styles.tileMainTxt}>Kebijakan Privasi</Text>
+              <Text style={styles.tileSubTxt}>Legal & Data</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={styles.footerApp}>
-           <Text style={styles.appVer}>LaviraMeal Professional v2.5.0</Text>
-           <Text style={styles.appCopy}>© 2026 PT Lavira Digital Indonesia</Text>
+        <View style={styles.detailListSection}>
+          <Text style={styles.sectionTitleTxt}>SPESIFIKASI INTI</Text>
+          <View style={styles.infoHub}>
+            <View style={styles.infoHubItem}>
+              <View style={styles.hubIcon}>
+                <Feather name={userData.role === 'siswa' ? 'book' : (userData.role === 'guru' ? 'briefcase' : 'mail')} size={18} color={TEXT_MUTED} />
+              </View>
+              <View style={styles.hubContent}>
+                <Text style={styles.hubLabel}>{userData.role === 'siswa' ? 'KELAS SISWA' : (userData.role === 'guru' ? 'JABATAN GURU' : 'EMAIL KONTAK')}</Text>
+                <Text style={styles.hubVal}>{userData.role === 'siswa' ? (userData.kelas || 'Umum') : (userData.role === 'guru' ? userData.displayJabatan : (userData.email || 'N/A'))}</Text>
+              </View>
+            </View>
+            <View style={styles.hubDivider} />
+            <View style={styles.infoHubItem}>
+              <View style={styles.hubIcon}>
+                <Feather name={userData.role === 'siswa' || userData.role === 'guru' ? 'hash' : 'map-pin'} size={18} color={TEXT_MUTED} />
+              </View>
+              <View style={styles.hubContent}>
+                <Text style={styles.hubLabel}>{userData.role === 'siswa' ? 'NOMOR INDUK SISWA (NIS)' : (userData.role === 'guru' ? 'NOMOR INDUK PEGAWAI (NIP)' : 'WILAYAH GEOGRAFIS')}</Text>
+                <Text style={styles.hubVal}>{userData.role === 'siswa' || userData.role === 'guru' ? (userData.nis || userData.nip || userData.username) : userData.region}</Text>
+              </View>
+            </View>
+            <View style={styles.hubDivider} />
+            <View style={styles.infoHubItem}>
+              <View style={styles.hubIcon}>
+                <Feather name={userData.role === 'siswa' || userData.role === 'guru' ? 'home' : 'database'} size={18} color={TEXT_MUTED} />
+              </View>
+              <View style={styles.hubContent}>
+                <Text style={styles.hubLabel}>{userData.role === 'siswa' || userData.role === 'guru' ? 'SEKOLAH ASAL' : 'ID SISTEM GLOBAL'}</Text>
+                <Text style={styles.hubVal}>{userData.role === 'siswa' || userData.role === 'guru' ? (userData.nama_sekolah || 'LAVIRA MEAL') : (userData.id || 'N/A')}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.exitActionBtn} onPress={handleLogout}>
+          <Feather name="power" size={18} color={WHITE} />
+          <Text style={styles.exitActionTxt}>Keluar</Text>
+        </TouchableOpacity>
+
+        <View style={styles.brandingFooter}>
+          <Image
+            source={require('../../../../assets/icon.png')}
+            style={styles.footerLogo}
+            resizeMode="contain"
+          />
+          <Text style={styles.footerVerTxt}>LaviraMeal Enterprise v2.5.0</Text>
+          <Text style={styles.footerCopyTxt}>© 2026 PT Lavira Digital Indonesia</Text>
         </View>
       </ScrollView>
 
-      {/* EDIT PROFILE MODAL */}
       <Modal visible={editModal} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-           <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                 <Text style={styles.modalTitleText}>Edit Profil</Text>
-                 <TouchableOpacity onPress={() => setEditModal(false)}>
-                    <Ionicons name="close-circle" size={28} color={TEXT_MUTED} />
-                 </TouchableOpacity>
+        <View style={styles.sheetOverlay}>
+          <View style={styles.sheetMain}>
+            <View style={styles.sheetDragger} />
+            <View style={styles.sheetHead}>
+              <View>
+                <Text style={styles.sheetTitleTxt}>Ubah Identitas</Text>
+                <Text style={styles.sheetSubTxt}>{userData.role === 'siswa' ? 'Perbarui spesifikasi profil Siswa' : (userData.role === 'guru' ? 'Perbarui spesifikasi profil Guru' : 'Perbarui spesifikasi profil SPPG')}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setEditModal(false)} style={styles.sheetCloseBtn}>
+                <Ionicons name="close" size={22} color={TEXT_MUTED} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.sheetFormScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.formItem}>
+                <Text style={styles.formItemLabel}>NAMA LENGKAP</Text>
+                <View style={styles.formInputWrap}>
+                  <Feather name="user" size={18} color={TEXT_MUTED} />
+                  <TextInput
+                    style={styles.formTextInput}
+                    value={editedData.nama}
+                    onChangeText={(txt) => setEditedData({ ...editedData, nama: txt })}
+                  />
+                </View>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
-                 <View style={styles.inputBox}>
-                    <Text style={styles.inputLabelText}>NAMA LENGKAP</Text>
-                    <TextInput 
-                      style={styles.modalInput} 
-                      placeholder="Masukkan nama lengkap"
-                      value={editedData.nama}
-                      onChangeText={(txt) => setEditedData({...editedData, nama: txt})}
-                    />
-                 </View>
-                 <View style={styles.inputBox}>
-                    <Text style={styles.inputLabelText}>EMAIL AKTIF</Text>
-                    <TextInput 
-                      style={styles.modalInput} 
-                      placeholder="Masukkan email"
-                      keyboardType="email-address"
-                      value={editedData.email}
-                      onChangeText={(txt) => setEditedData({...editedData, email: txt})}
-                    />
-                 </View>
-                 <View style={styles.inputBox}>
-                    <Text style={styles.inputLabelText}>JABATAN</Text>
-                    <TextInput 
-                      style={styles.modalInput} 
-                      placeholder="Contoh: Administrator Wilayah"
-                      value={editedData.jabatan}
-                      onChangeText={(txt) => setEditedData({...editedData, jabatan: txt})}
-                    />
-                 </View>
-                 <View style={styles.inputBox}>
-                    <Text style={styles.inputLabelText}>NIP / NOMOR PEGAWAI</Text>
-                    <TextInput 
-                      style={styles.modalInput} 
-                      placeholder="Contoh: SPPG-2026-001"
-                      value={editedData.nip}
-                      onChangeText={(txt) => setEditedData({...editedData, nip: txt})}
-                    />
-                 </View>
+              <View style={styles.formItem}>
+                <Text style={styles.formItemLabel}>ALAMAT EMAIL</Text>
+                <View style={styles.formInputWrap}>
+                  <Feather name="mail" size={18} color={TEXT_MUTED} />
+                  <TextInput
+                    style={styles.formTextInput}
+                    value={editedData.email}
+                    onChangeText={(txt) => setEditedData({ ...editedData, email: txt })}
+                    keyboardType="email-address"
+                  />
+                </View>
+              </View>
 
-                 <TouchableOpacity style={styles.modalActionBtn} onPress={handleSaveProfile} disabled={loading}>
-                    {loading ? <ActivityIndicator color={WHITE} /> : <Text style={styles.modalActionBtnText}>SIMPAN PERUBAHAN</Text>}
-                 </TouchableOpacity>
-                 <View style={{ height: 50 }} />
-              </ScrollView>
-           </View>
+              <View style={[styles.formItem, (userData.role === 'siswa' || userData.role === 'guru') && { display: 'none' }]}>
+                <Text style={styles.formItemLabel}>NAMA LEMBAGA</Text>
+                <View style={styles.formInputWrap}>
+                  <Feather name="home" size={18} color={TEXT_MUTED} />
+                  <TextInput
+                    style={styles.formTextInput}
+                    value={editedData.nama_lembaga}
+                    onChangeText={(txt) => setEditedData({ ...editedData, nama_lembaga: txt })}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.formItem, (userData.role === 'siswa' || userData.role === 'guru') && { display: 'none' }]}>
+                <Text style={styles.formItemLabel}>JABATAN</Text>
+                <View style={styles.formInputWrap}>
+                  <Feather name="briefcase" size={18} color={TEXT_MUTED} />
+                  <TextInput
+                    style={styles.formTextInput}
+                    value={editedData.jabatan}
+                    onChangeText={(txt) => setEditedData({ ...editedData, jabatan: txt })}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.formItem, (userData.role === 'siswa' || userData.role === 'guru') && { display: 'none' }]}>
+                <Text style={styles.formItemLabel}>ID PEGAWAI / NIP</Text>
+                <View style={styles.formInputWrap}>
+                  <Feather name="hash" size={18} color={TEXT_MUTED} />
+                  <TextInput
+                    style={styles.formTextInput}
+                    value={editedData.nip}
+                    onChangeText={(txt) => setEditedData({ ...editedData, nip: txt })}
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.submitIdentityBtn} onPress={handleSaveProfile} disabled={loading}>
+                {loading ? <ActivityIndicator color={WHITE} /> : (
+                  <Text style={styles.submitIdentityTxt}>SIMPAN PERUBAHAN</Text>
+                )}
+              </TouchableOpacity>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
         </View>
       </Modal>
 
-      {/* PIN UPDATE MODAL */}
       <Modal visible={pinModal} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-           <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                 <Text style={styles.modalTitleText}>Update Keamanan</Text>
-                 <TouchableOpacity onPress={() => setPinModal(false)}>
-                    <Ionicons name="close-circle" size={28} color={TEXT_MUTED} />
-                 </TouchableOpacity>
+        <View style={styles.sheetOverlay}>
+          <View style={styles.sheetMain}>
+            <View style={styles.sheetDragger} />
+            <View style={styles.sheetHead}>
+              <View>
+                <Text style={styles.sheetTitleTxt}>Akses Keamanan</Text>
+                <Text style={styles.sheetSubTxt}>Perbarui kata sandi sistem Anda</Text>
+              </View>
+              <TouchableOpacity onPress={() => setPinModal(false)} style={styles.sheetCloseBtn}>
+                <Ionicons name="close" size={22} color={TEXT_MUTED} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.sheetFormScroll}>
+              <View style={styles.formItem}>
+                <Text style={styles.formItemLabel}>KATA SANDI SAAT INI</Text>
+                <TextInput
+                  style={styles.minimalistInput}
+                  secureTextEntry={!showPins}
+                  value={oldPin}
+                  onChangeText={setOldPin}
+                  placeholder="Sandi Saat Ini"
+                  autoCapitalize="none"
+                />
+              </View>
+              <View style={styles.formItem}>
+                <Text style={styles.formItemLabel}>KATA SANDI BARU (MIN 8 KARAKTER)</Text>
+                <TextInput
+                  style={styles.minimalistInput}
+                  secureTextEntry={!showPins}
+                  value={newPin}
+                  onChangeText={setNewPin}
+                  placeholder="Minimal 8 Karakter"
+                  autoCapitalize="none"
+                />
+              </View>
+              <View style={styles.formItem}>
+                <Text style={styles.formItemLabel}>KONFIRMASI KATA SANDI BARU</Text>
+                <TextInput
+                  style={styles.minimalistInput}
+                  secureTextEntry={!showPins}
+                  value={confirmPin}
+                  onChangeText={setConfirmPin}
+                  placeholder="Ulangi Sandi Baru"
+                  autoCapitalize="none"
+                />
               </View>
 
-              <View style={styles.modalBody}>
-                 <View style={styles.inputBox}>
-                    <Text style={styles.inputLabelText}>SANDI LAMA</Text>
-                    <TextInput 
-                      style={styles.modalInput} 
-                      secureTextEntry={!showPins} 
-                      placeholder="Masukkan sandi lama"
-                      value={oldPin}
-                      onChangeText={setOldPin}
-                    />
-                 </View>
-                 <View style={styles.inputBox}>
-                    <Text style={styles.inputLabelText}>SANDI BARU</Text>
-                    <TextInput 
-                      style={styles.modalInput} 
-                      secureTextEntry={!showPins} 
-                      placeholder="Masukkan sandi baru"
-                      value={newPin}
-                      onChangeText={setNewPin}
-                    />
-                 </View>
-                 <View style={styles.inputBox}>
-                    <Text style={styles.inputLabelText}>KONFIRMASI SANDI</Text>
-                    <TextInput 
-                      style={styles.modalInput} 
-                      secureTextEntry={!showPins} 
-                      placeholder="Ulangi sandi baru"
-                      value={confirmPin}
-                      onChangeText={setConfirmPin}
-                    />
-                 </View>
-                 <TouchableOpacity style={styles.showPinBtn} onPress={() => setShowPins(!showPins)}>
-                    <Ionicons name={showPins ? "eye-off" : "eye"} size={16} color={BLUE_ACCENT} />
-                    <Text style={styles.showPinText}>{showPins ? "Sembunyikan" : "Tampilkan"} Sandi</Text>
-                 </TouchableOpacity>
+              <TouchableOpacity style={styles.togglePinLink} onPress={() => setShowPins(!showPins)}>
+                <Text style={styles.togglePinLinkTxt}>{showPins ? "Sembunyikan" : "Tampilkan"} Sandi</Text>
+              </TouchableOpacity>
 
-                 <TouchableOpacity style={styles.modalActionBtn} onPress={handleChangePin} disabled={isChangingPin}>
-                    {isChangingPin ? <ActivityIndicator color={WHITE} /> : <Text style={styles.modalActionBtnText}>SIMPAN PERUBAHAN</Text>}
-                 </TouchableOpacity>
-              </View>
-           </View>
+              <TouchableOpacity style={styles.submitIdentityBtn} onPress={handleChangePin} disabled={isChangingPin}>
+                {isChangingPin ? <ActivityIndicator color={WHITE} /> : <Text style={styles.submitIdentityTxt}>PERBARUI KATA SANDI SISTEM</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
 
-      {/* BOTTOM NAV RE-IMPLEMENTED FOR CONSISTENCY */}
       <View style={styles.bottomNav}>
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(userData.role === 'sppg' ? 'Home' : userData.role === 'sekolah' ? 'HomeSekolah' : userData.role === 'kantin' ? 'HomeKantin' : 'HomeSiswa')}>
-            <Ionicons name="home-outline" size={24} color={TEXT_MUTED} />
-            <Text style={styles.navLabelText}>Beranda</Text>
-         </TouchableOpacity>
-         {(userData.role !== 'kantin' && userData.role !== 'siswa') && (
-           <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(userData.role === 'sppg' ? 'Sekolah' : 'ManajemenKelas')}>
-              <Ionicons name={userData.role === 'sppg' ? "business-outline" : "layers-outline"} size={24} color={TEXT_MUTED} />
-              <Text style={styles.navLabelText}>{userData.role === 'sppg' ? 'Sekolah' : 'Kelas'}</Text>
-           </TouchableOpacity>
-         )}
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(userData.role === 'sppg' ? 'Laporan' : userData.role === 'sekolah' ? 'LaporanSekolah' : 'LaporanKantin')}>
-            <Ionicons name="bar-chart-outline" size={24} color={TEXT_MUTED} />
-            <Text style={styles.navLabelText}>Laporan</Text>
-         </TouchableOpacity>
-         <TouchableOpacity style={styles.navItem}>
-            <Ionicons name="person" size={24} color={BLUE_PRIMARY} />
-            <Text style={[styles.navLabelText, { color: BLUE_PRIMARY, fontWeight: '900' }]}>Profil</Text>
-            <View style={styles.activeDotNav} />
-         </TouchableOpacity>
+        <View style={styles.bottomNavInner}>
+          {userData.role === 'siswa' || userData.role === 'guru' ? (
+            <>
+              <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('HomeSiswa')}>
+                <Ionicons name="grid-outline" size={24} color={TEXT_MUTED} />
+                <Text style={styles.navLabel}>Home</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('RiwayatSiswa')}>
+                <Ionicons name="receipt-outline" size={24} color={TEXT_MUTED} />
+                <Text style={styles.navLabel}>Riwayat</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.navItem}>
+                <Ionicons name="person" size={24} color={BLUE_PRIMARY} />
+                <Text style={[styles.navLabel, { color: BLUE_PRIMARY }]}>Profil</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+                <Ionicons name="grid-outline" size={24} color={TEXT_MUTED} />
+                <Text style={styles.navLabel}>Beranda</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Sekolah')}>
+                <Ionicons name="business-outline" size={24} color={TEXT_MUTED} />
+                <Text style={styles.navLabel}>Sekolah</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Laporan')}>
+                <Ionicons name="bar-chart-outline" size={24} color={TEXT_MUTED} />
+                <Text style={styles.navLabel}>Laporan</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.navItem}>
+                <Ionicons name="person" size={24} color={BLUE_PRIMARY} />
+                <Text style={[styles.navLabel, { color: BLUE_PRIMARY }]}>Profil</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: SOFT_BG },
-  headerHero: { height: 380, borderBottomLeftRadius: 50, borderBottomRightRadius: 50, overflow: 'hidden', elevation: 20 },
-  batikHeader: { flex: 1, backgroundColor: BLUE_PRIMARY },
-  safeHeader: { flex: 1, paddingHorizontal: 25 },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-  headerMainTitle: { color: WHITE, fontSize: 16, fontWeight: '900', letterSpacing: 1.5 },
-  profileSection: { alignItems: 'center', marginTop: 20 },
-  avatarWrapper: { position: 'relative' },
-  avatarFrame: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
-  avatarImg: { width: '100%', height: '100%' },
-  avatarPlaceholder: { width: '100%', height: '100%', backgroundColor: BLUE_ACCENT, justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { color: WHITE, fontSize: 44, fontWeight: 'bold' },
-  editBadge: { position: 'absolute', bottom: 2, right: 2, backgroundColor: BLUE_PRIMARY, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: WHITE },
-  profileName: { color: WHITE, fontSize: 22, fontWeight: '900', marginTop: 12, textAlign: 'center' },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 10, gap: 8, flexWrap: 'wrap' },
-  premiumBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, gap: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-  premiumBadgeText: { color: WHITE, fontSize: 9, fontWeight: '900' },
-  idText: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: 'bold' },
-  editActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10, gap: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  editActionText: { color: WHITE, fontSize: 9, fontWeight: '900' },
+  container: { flex: 1, backgroundColor: WHITE },
+  heroSection: { height: 300, backgroundColor: BLUE_PRIMARY, borderBottomLeftRadius: 45, borderBottomRightRadius: 45, overflow: 'hidden', marginTop: -1 },
+  heroBatik: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  profileMaster: { alignItems: 'center' },
+  mainAvatarWrap: { position: 'relative' },
+  avatarGlow: { position: 'absolute', top: -10, left: -10, right: -10, bottom: -10, borderRadius: 60, backgroundColor: 'rgba(56, 189, 248, 0.15)' },
+  avatarBorder: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' },
+  avatarImage: { width: '100%', height: '100%' },
+  initialsBox: { width: '100%', height: '100%', backgroundColor: BLUE_ACCENT, justifyContent: 'center', alignItems: 'center' },
+  initialsTxt: { color: WHITE, fontSize: 42, fontWeight: '900' },
+  editCamBadge: { position: 'absolute', bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: BLUE_PRIMARY, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: BLUE_PRIMARY },
+  masterName: { color: WHITE, fontSize: 24, fontWeight: '900', marginTop: 15 },
+  roleBadge: { backgroundColor: 'rgba(255,255,255,0.08)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10, marginTop: 8 },
+  roleBadgeTxt: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
 
-  cardWrapper: { paddingHorizontal: 25, marginTop: -50 },
-  digitalIdCard: { backgroundColor: BLUE_PRIMARY, borderRadius: 30, padding: 25, elevation: 15, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 20 },
-  idCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  idLembaga: { color: WHITE, fontSize: 16, fontWeight: '900', letterSpacing: 1 },
-  idSystem: { color: BLUE_ACCENT, fontSize: 10, fontWeight: '700', marginTop: 2 },
-  idDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 20 },
-  idDetails: { gap: 15 },
-  idField: { gap: 4 },
-  idLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
-  idValue: { color: WHITE, fontSize: 15, fontWeight: 'bold' },
-  idFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, alignItems: 'flex-end' },
-  footerInfo: { gap: 5 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: ACCENT_GREEN },
-  statusText: { color: ACCENT_GREEN, fontSize: 10, fontWeight: '900' },
-  watermark: { width: 50, height: 50, opacity: 0.1, position: 'absolute', right: -10, bottom: -10 },
+  idCardWrapper: { paddingHorizontal: 25, marginTop: -35 },
+  premiumCard: { backgroundColor: '#1C2C5B', borderRadius: 35, padding: 25, elevation: 30, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 30, overflow: 'hidden' },
+  cardPattern: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.02)', opacity: 0.1 },
+  cardAura: { position: 'absolute', top: -50, right: -50, width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(56, 189, 248, 0.05)' },
+  cardHeaderArea: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  cardTag: { color: BLUE_ACCENT, fontSize: 9, fontWeight: '900', letterSpacing: 2, marginBottom: 5 },
+  cardInstitution: { color: WHITE, fontSize: 18, fontWeight: 'bold' },
+  digitalSeal: { opacity: 0.6 },
+  cardMainInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 25 },
+  infoCol: { flex: 1 },
+  idItemBox: { marginBottom: 15 },
+  idItemLabel: { color: 'rgba(255,255,255,0.35)', fontSize: 7, fontWeight: '900', letterSpacing: 1, marginBottom: 4 },
+  idItemVal: { color: WHITE, fontSize: 14, fontWeight: 'bold' },
+  cardBarcodeArea: { alignItems: 'center' },
+  barcodeBox: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 15, marginBottom: 5 },
+  barcodeLabel: { color: 'rgba(255,255,255,0.3)', fontSize: 6, fontWeight: '900', letterSpacing: 1 },
+  cardBottomBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  authRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  greenPulse: { width: 6, height: 6, borderRadius: 3, backgroundColor: ACCENT_GREEN },
+  authStatus: { color: ACCENT_GREEN, fontSize: 9, fontWeight: '900', letterSpacing: 1, marginLeft: 5 },
+  digitalSignature: { alignItems: 'flex-end', flex: 1 },
+  signatureName: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 'bold', fontStyle: 'italic', textAlign: 'right' },
+  signatureSubtitle: { color: 'rgba(255,255,255,0.2)', fontSize: 7, fontWeight: '900', letterSpacing: 1, marginTop: 2 },
 
-  section: { paddingHorizontal: 25, marginTop: 35 },
-  sectionHeading: { fontSize: 12, fontWeight: '900', color: TEXT_MUTED, marginBottom: 15, letterSpacing: 1 },
-  infoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: WHITE, padding: 15, borderRadius: 20, marginBottom: 12, elevation: 2 },
-  infoIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  infoContent: { flex: 1 },
-  infoLabelText: { fontSize: 10, color: TEXT_MUTED, fontWeight: '700' },
-  infoValueText: { fontSize: 14, color: TEXT_MAIN, fontWeight: '900', marginTop: 2 },
+  tilesContainer: { paddingHorizontal: 25, marginTop: 35 },
+  sectionTitleTxt: { color: TEXT_MUTED, fontSize: 11, fontWeight: '900', letterSpacing: 1.5, marginBottom: 20 },
+  tilesRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  premiumTile: { width: '48%', backgroundColor: WHITE, borderRadius: 28, padding: 22, borderWidth: 1, borderColor: BORDER_LIGHT, elevation: 2 },
+  tileIconBox: { width: 45, height: 45, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
+  tileMainTxt: { color: TEXT_MAIN, fontSize: 15, fontWeight: 'bold' },
+  tileSubTxt: { color: TEXT_MUTED, fontSize: 11, marginTop: 2 },
 
-  menuContainer: { backgroundColor: WHITE, borderRadius: 25, overflow: 'hidden', elevation: 4 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 18 },
-  menuIconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  menuText: { flex: 1, fontSize: 14, color: TEXT_MAIN, fontWeight: '700' },
-  menuDivider: { height: 1, backgroundColor: SOFT_BG, marginHorizontal: 20 },
+  detailListSection: { paddingHorizontal: 25, marginTop: 35 },
+  infoHub: { backgroundColor: WHITE, borderRadius: 30, padding: 25, borderWidth: 1, borderColor: BORDER_LIGHT },
+  infoHubItem: { flexDirection: 'row', alignItems: 'center' },
+  hubIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: SOFT_BG, justifyContent: 'center', alignItems: 'center' },
+  hubContent: { marginLeft: 15 },
+  hubLabel: { color: TEXT_MUTED, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  hubVal: { color: TEXT_MAIN, fontSize: 14, fontWeight: 'bold', marginTop: 2 },
+  hubDivider: { height: 1, backgroundColor: BORDER_LIGHT, marginVertical: 20, marginHorizontal: 10 },
 
-  dangerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT_RED, height: 60, borderRadius: 20, gap: 10, marginTop: 25, elevation: 5 },
-  dangerBtnText: { color: WHITE, fontSize: 14, fontWeight: '900' },
+  exitActionBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', marginTop: 40, backgroundColor: ACCENT_RED, paddingHorizontal: 25, paddingVertical: 15, borderRadius: 20 },
+  exitActionTxt: { color: WHITE, fontSize: 12, fontWeight: '900', marginLeft: 10, letterSpacing: 1 },
+  brandingFooter: { alignItems: 'center', marginTop: 60, opacity: 0.5 },
+  footerLogo: { width: 40, height: 40, marginBottom: 15 },
+  footerVerTxt: { color: TEXT_MAIN, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  footerCopyTxt: { color: TEXT_MUTED, fontSize: 9, marginTop: 5 },
 
-  footerApp: { alignItems: 'center', marginTop: 40, gap: 5 },
-  appVer: { fontSize: 11, color: BORDER_LIGHT, fontWeight: 'bold' },
-  appCopy: { fontSize: 10, color: BORDER_LIGHT, fontWeight: '600' },
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(11, 30, 63, 0.7)', justifyContent: 'flex-end' },
+  sheetMain: { backgroundColor: WHITE, borderTopLeftRadius: 40, borderTopRightRadius: 40, paddingHorizontal: 25, maxHeight: '85%' },
+  sheetDragger: { width: 40, height: 5, borderRadius: 3, backgroundColor: BORDER_LIGHT, alignSelf: 'center', marginVertical: 15 },
+  sheetHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+  sheetTitleTxt: { color: TEXT_MAIN, fontSize: 20, fontWeight: 'bold' },
+  sheetSubTxt: { color: TEXT_MUTED, fontSize: 13, marginTop: 2 },
+  sheetFormScroll: { paddingBottom: 40 },
+  formItem: { marginBottom: 20 },
+  formItemLabel: { color: TEXT_MUTED, fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 10 },
+  formInputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: SOFT_BG, borderRadius: 20, paddingHorizontal: 15, height: 60, borderWidth: 1, borderColor: BORDER_LIGHT },
+  formTextInput: { flex: 1, marginLeft: 12, fontSize: 15, fontWeight: 'bold', color: BLUE_PRIMARY },
+  submitIdentityBtn: { backgroundColor: BLUE_PRIMARY, height: 65, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginTop: 20, elevation: 8 },
+  submitIdentityTxt: { color: WHITE, fontSize: 15, fontWeight: '900', letterSpacing: 1 },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: WHITE, borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 30, paddingBottom: 50 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
-  modalTitleText: { fontSize: 20, fontWeight: '900', color: BLUE_PRIMARY },
-  modalBody: { gap: 20 },
-  inputBox: { gap: 8 },
-  inputLabelText: { fontSize: 10, fontWeight: '900', color: TEXT_MUTED },
-  modalInput: { height: 55, backgroundColor: SOFT_BG, borderRadius: 16, paddingHorizontal: 20, fontSize: 14, fontWeight: 'bold', color: BLUE_PRIMARY, borderWidth: 1, borderColor: BORDER_LIGHT },
-  showPinBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-end' },
-  showPinText: { fontSize: 12, fontWeight: '700', color: BLUE_ACCENT },
-  modalActionBtn: { backgroundColor: BLUE_PRIMARY, height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
-  modalActionBtnText: { color: WHITE, fontSize: 15, fontWeight: '900' },
+  minimalistInput: { height: 60, backgroundColor: SOFT_BG, borderRadius: 20, paddingHorizontal: 20, fontSize: 16, fontWeight: '600', color: BLUE_PRIMARY, borderWidth: 1, borderColor: BORDER_LIGHT, textAlign: 'center' },
+  togglePinLink: { alignSelf: 'center', marginTop: 5, marginBottom: 20 },
+  togglePinLinkTxt: { color: BLUE_ACCENT, fontSize: 12, fontWeight: 'bold' },
 
-  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 100, backgroundColor: WHITE, flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 25, borderTopLeftRadius: 40, borderTopRightRadius: 40, elevation: 50, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, alignItems: 'center' },
-  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 10 },
-  navLabelText: { fontSize: 10, fontWeight: '700', color: TEXT_MUTED, marginTop: 4 },
-  activeDotNav: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: BLUE_PRIMARY, marginTop: 4 },
+  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: WHITE, height: 90, borderTopWidth: 1, borderTopColor: BORDER_LIGHT, paddingBottom: 25 },
+  bottomNavInner: { flex: 1, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
+  navItem: { alignItems: 'center' },
+  navLabel: { fontSize: 10, fontWeight: 'bold', color: TEXT_MUTED, marginTop: 4 }
 });

@@ -76,6 +76,63 @@ if (!empty($sppg_id)) {
 
                 $sekolah['target_konsumsi'] = (int)$target_konsumsi;
                 $sekolah['kepatuhan_gizi'] = (int)$kepatuhan_gizi;
+
+                // Auto-population: Jika belum ada guru terdaftar, isi dengan 3 guru realistis untuk demo
+                $stmt_check_guru = $db->prepare("SELECT COUNT(*) FROM guru WHERE sekolah_id = ?");
+                $stmt_check_guru->execute([$sekolah['id']]);
+                if ($stmt_check_guru->fetchColumn() == 0) {
+                    $mock_gurus = [
+                        [
+                            'nama' => 'Drs. H. Mulyana, M.Pd.',
+                            'nip' => '197204121998031002',
+                            'mapel' => 'Matematika / Kepala Sekolah',
+                            'email' => 'mulyana@guru.lavira.com'
+                        ],
+                        [
+                            'nama' => 'Sri Wahyuni, S.Pd.',
+                            'nip' => '198509152009042003',
+                            'mapel' => 'Bahasa Inggris',
+                            'email' => 'sri.wahyuni@guru.lavira.com'
+                        ],
+                        [
+                            'nama' => 'Budi Santoso, S.Kom.',
+                            'nip' => '199001232015031001',
+                            'mapel' => 'Informatika',
+                            'email' => 'budi.santoso@guru.lavira.com'
+                        ]
+                    ];
+                    
+                    foreach ($mock_gurus as $mg) {
+                        $user_id = bin2hex(random_bytes(16));
+                        $guru_id = bin2hex(random_bytes(16));
+                        $password_hash = password_hash('guru123', PASSWORD_BCRYPT);
+                        
+                        // Insert User
+                        $stmt_u = $db->prepare("
+                            INSERT INTO users (id, nama, username, email, password_hash, role, sekolah_id, is_active)
+                            VALUES (?, ?, ?, ?, ?, 'guru', ?, 1)
+                        ");
+                        $stmt_u->execute([$user_id, $mg['nama'], $mg['nip'], $mg['email'], $password_hash, $sekolah['id']]);
+                        
+                        // Insert Guru
+                        $stmt_g = $db->prepare("
+                            INSERT INTO guru (id, user_id, sekolah_id, nip, nama, mata_pelajaran)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ");
+                        $stmt_g->execute([$guru_id, $user_id, $sekolah['id'], $mg['nip'], $mg['nama'], $mg['mapel']]);
+                    }
+                }
+
+                // Ambil daftar guru yang terdaftar di sekolah ini
+                $stmt_guru = $db->prepare("
+                    SELECT g.id, g.nama, g.nip, g.mata_pelajaran, u.email, u.is_active
+                    FROM guru g
+                    JOIN users u ON g.user_id = u.id
+                    WHERE g.sekolah_id = ?
+                    ORDER BY g.nama ASC
+                ");
+                $stmt_guru->execute([$sekolah['id']]);
+                $sekolah['guru_list'] = $stmt_guru->fetchAll(PDO::FETCH_ASSOC);
             }
         } else {
             $sekolah = $stmt->fetchAll(PDO::FETCH_ASSOC);

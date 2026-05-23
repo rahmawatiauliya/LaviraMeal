@@ -9,7 +9,10 @@ import {
   Image,
   Alert,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  Modal,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -25,6 +28,10 @@ export default function KantinApprovalScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingKantin, setPendingKantin] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedKantin, setSelectedKantin] = useState(null);
+  const [reviewNote, setReviewNote] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const fetchPendingKantin = async () => {
     try {
@@ -53,37 +60,49 @@ export default function KantinApprovalScreen({ navigation }) {
     fetchPendingKantin();
   };
 
-  const handleApprove = (kantin) => {
+  const handleAction = async (action) => {
+    if (!selectedKantin) return;
+
     Alert.alert(
-      "Konfirmasi Persetujuan",
-      `Apakah Anda yakin ingin menyetujui ${kantin.nama_kantin} untuk menjadi mitra MBG?`,
+      action === 'approved' ? 'Konfirmasi Setuju' : 'Konfirmasi Tolak',
+      `Apakah Anda yakin ingin ${action === 'approved' ? 'menyetujui' : 'menolak'} ${selectedKantin.nama_kantin}?`,
       [
         { text: "Batal", style: "cancel" },
         { 
-          text: "Setujui", 
+          text: action === 'approved' ? 'Setujui' : 'Tolak', 
           onPress: async () => {
             try {
-              setLoading(true);
+              setActionLoading(true);
               const response = await apiClient.post('sekolah/sekolah_approve_kantin.php', {
-                kantin_id: kantin.id,
-                user_id: kantin.user_id
+                kantin_id: selectedKantin.id,
+                user_id: selectedKantin.user_id,
+                action: action,
+                notes: reviewNote
               });
               
               if (response.data.status === 'success') {
-                Alert.alert("Berhasil", "Kantin telah disetujui dan kini aktif.");
+                Alert.alert("Berhasil", response.data.message);
+                setModalVisible(false);
+                setReviewNote('');
                 fetchPendingKantin();
               } else {
                 Alert.alert("Gagal", response.data.message || "Terjadi kesalahan.");
               }
             } catch (err) {
-              Alert.alert("Error", "Koneksi bermasalah.");
+              Alert.alert("Error", "Gagal memproses pendaftaran.");
             } finally {
-              setLoading(false);
+              setActionLoading(false);
             }
           }
         }
       ]
     );
+  };
+
+  const openDetail = (kantin) => {
+    setSelectedKantin(kantin);
+    setReviewNote('');
+    setModalVisible(true);
   };
 
   const renderKantinItem = ({ item }) => (
@@ -105,14 +124,102 @@ export default function KantinApprovalScreen({ navigation }) {
         </View>
       </View>
       <View style={styles.cardFooter}>
-        <TouchableOpacity style={styles.detailBtn} onPress={() => Alert.alert("Detail Berkas", "Fitur melihat dokumen pendaftaran kantin.")}>
-          <Text style={styles.detailBtnText}>Lihat Berkas</Text>
+        <TouchableOpacity style={styles.detailBtn} onPress={() => openDetail(item)}>
+          <Text style={styles.detailBtnText}>Lihat Detail & Berkas</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(item)}>
-          <Text style={styles.approveBtnText}>Setujui Kantin</Text>
+        <TouchableOpacity style={styles.approveBtn} onPress={() => openDetail(item)}>
+          <Text style={styles.approveBtnText}>Proses</Text>
         </TouchableOpacity>
       </View>
     </View>
+  );
+
+  const renderModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Verifikasi Berkas Kantin</Text>
+            <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
+            {selectedKantin && (
+              <>
+                <Text style={styles.sectionLabel}>Identitas Kantin</Text>
+                <View style={styles.detailBox}>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Nama:</Text> {selectedKantin.nama_kantin}</Text>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Pemilik:</Text> {selectedKantin.pemilik}</Text>
+                  <Text style={styles.detailText}><Text style={styles.bold}>WhatsApp:</Text> {selectedKantin.no_telp || '-'}</Text>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Kapasitas:</Text> {selectedKantin.kapasitas_porsi} Porsi/Hari</Text>
+                </View>
+
+                <Text style={styles.sectionLabel}>Status Verifikasi</Text>
+                <View style={styles.detailBox}>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Status SPPG:</Text> {selectedKantin.status_sppg.toUpperCase()}</Text>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Status Sekolah:</Text> {selectedKantin.status_sekolah.toUpperCase()}</Text>
+                </View>
+
+                <Text style={styles.sectionLabel}>Foto Bangunan/Kantin</Text>
+                {selectedKantin.foto_kantin ? (
+                  <Image 
+                    source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedKantin.foto_kantin}` }} 
+                    style={styles.previewImg} 
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.noImg}><Text>Tidak ada foto kantin</Text></View>
+                )}
+
+                <Text style={styles.sectionLabel}>Foto Daftar Menu</Text>
+                {selectedKantin.foto_menu ? (
+                  <Image 
+                    source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedKantin.foto_menu}` }} 
+                    style={styles.previewImg} 
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.noImg}><Text>Tidak ada foto menu</Text></View>
+                )}
+
+                <Text style={styles.sectionLabel}>Catatan Review (Opsional)</Text>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Contoh: Lokasi kurang bersih atau Menu kurang bervariasi..."
+                  multiline
+                  value={reviewNote}
+                  onChangeText={setReviewNote}
+                />
+              </>
+            )}
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.rejectBtn]} 
+              onPress={() => handleAction('rejected')}
+              disabled={!!actionLoading}
+            >
+              <Text style={styles.actionBtnTxt}>Tolak</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.approveFinalBtn]} 
+              onPress={() => handleAction('approved')}
+              disabled={!!actionLoading}
+            >
+              {actionLoading ? <ActivityIndicator color={WHITE} /> : <Text style={styles.actionBtnTxt}>Setujui (ACC)</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 
   return (
@@ -157,6 +264,7 @@ export default function KantinApprovalScreen({ navigation }) {
           />
         )}
       </View>
+      {renderModal()}
     </View>
   );
 }
@@ -188,5 +296,23 @@ const styles = StyleSheet.create({
 
   emptyContainer: { alignItems: 'center', marginTop: 100, paddingHorizontal: 50 },
   emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#64748B', marginTop: 15 },
-  emptySub: { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 8, lineHeight: 20 }
+  emptySub: { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 8, lineHeight: 20 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: WHITE, borderTopLeftRadius: 30, borderTopRightRadius: 30, height: '90%', padding: 25 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: BLUE_PRIMARY },
+  modalBody: { flex: 1 },
+  sectionLabel: { fontSize: 12, fontWeight: 'bold', color: '#64748b', marginTop: 20, marginBottom: 8, textTransform: 'uppercase' },
+  detailBox: { backgroundColor: '#f8fafc', padding: 15, borderRadius: 15, gap: 5 },
+  detailText: { fontSize: 14, color: '#1e293b' },
+  bold: { fontWeight: 'bold' },
+  previewImg: { width: '100%', height: 220, borderRadius: 15, marginTop: 5 },
+  noImg: { width: '100%', height: 100, backgroundColor: '#f1f5f9', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+  noteInput: { backgroundColor: '#f1f5f9', borderRadius: 15, padding: 15, height: 100, textAlignVertical: 'top', marginTop: 10, marginBottom: 20 },
+  modalFooter: { flexDirection: 'row', gap: 15, marginTop: 10, paddingBottom: 20 },
+  actionBtn: { flex: 1, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+  rejectBtn: { backgroundColor: '#ef4444' },
+  approveFinalBtn: { backgroundColor: SUCCESS },
+  actionBtnTxt: { color: WHITE, fontWeight: 'bold', fontSize: 16 },
 });

@@ -74,22 +74,22 @@ export default function RiwayatSiswaScreen({ navigation }) {
     return (
       <View style={styles.historyItem}>
         <View style={[
-          styles.historyIcon, 
+          styles.historyIcon,
           { backgroundColor: isMasuk ? '#F0FDF4' : (isMeal ? '#EFF6FF' : '#FEF2F2') }
         ]}>
-          <Ionicons 
-            name={isMasuk ? "arrow-down-circle" : (isMeal ? "restaurant" : "arrow-up-circle")} 
-            size={22} 
-            color={isMasuk ? SUCCESS : (isMeal ? BLUE_PRIMARY : '#EF4444')} 
+          <Ionicons
+            name={isMasuk ? "arrow-down-circle" : (isMeal ? "restaurant" : "arrow-up-circle")}
+            size={22}
+            color={isMasuk ? SUCCESS : (isMeal ? BLUE_PRIMARY : '#EF4444')}
           />
         </View>
         <View style={{ flex: 1 }}>
           <View style={styles.itemHeader}>
-              <Text style={styles.historyMessage}>{item.message}</Text>
-              <Text style={styles.historyTime}>{item.created_at ? new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}</Text>
+            <Text style={styles.historyMessage}>{item.message}</Text>
+            <Text style={styles.historyTime}>{item.created_at ? new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}</Text>
           </View>
           <Text style={[
-            styles.historyDetail, 
+            styles.historyDetail,
             { color: isMasuk ? SUCCESS : '#EF4444' }
           ]}>
             {isMasuk ? 'Masuk: +' : 'Keluar: -'}{item.amount} PTS
@@ -103,24 +103,24 @@ export default function RiwayatSiswaScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
+
       {/* HEADER SECTION */}
       <View style={styles.headerArea}>
-         <View style={styles.headerBg}>
-            <Image 
-               source={require('../../../../assets/batik_cirebon.png')} 
-               style={[StyleSheet.absoluteFillObject, { opacity: 0.12, resizeMode: 'repeat' }]} 
-            />
-            <SafeAreaView style={{ flex: 1 }}>
-               <View style={styles.headerTop}>
-                  <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtnAction}>
-                    <Feather name="arrow-left" size={24} color={WHITE} />
-                  </TouchableOpacity>
-                  <Text style={styles.headerTitleTxt}>Riwayat Transaksi</Text>
-                  <View style={{ width: 40 }} />
-               </View>
-            </SafeAreaView>
-         </View>
+        <View style={styles.headerBg}>
+          <Image
+            source={require('../../../../assets/batik_cirebon.png')}
+            style={[StyleSheet.absoluteFillObject, { opacity: 0.12, resizeMode: 'repeat' }]}
+          />
+          <SafeAreaView style={{ flex: 1 }}>
+            <View style={styles.headerTop}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtnAction}>
+                <Feather name="arrow-left" size={24} color={WHITE} />
+              </TouchableOpacity>
+              <Text style={styles.headerTitleTxt}>Riwayat Transaksi</Text>
+              <View style={{ width: 40 }} />
+            </View>
+          </SafeAreaView>
+        </View>
       </View>
 
       {loading ? (
@@ -147,20 +147,20 @@ export default function RiwayatSiswaScreen({ navigation }) {
 
       {/* BOTTOM NAV */}
       <View style={styles.bottomNav}>
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('HomeSiswa')}>
-           <Ionicons name="grid-outline" size={24} color="#94A3B8" />
-           <Text style={styles.navLabel}>Home</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('HomeSiswa')}>
+          <Ionicons name="grid-outline" size={24} color="#94A3B8" />
+          <Text style={styles.navLabel}>Home</Text>
+        </TouchableOpacity>
 
-         <TouchableOpacity style={styles.navItem}>
-           <Ionicons name="receipt" size={24} color={BLUE_PRIMARY} />
-           <Text style={[styles.navLabel, {color: BLUE_PRIMARY}]}>Riwayat</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="receipt" size={24} color={BLUE_PRIMARY} />
+          <Text style={[styles.navLabel, { color: BLUE_PRIMARY }]}>Riwayat</Text>
+        </TouchableOpacity>
 
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profil')}>
-           <Ionicons name="person-outline" size={24} color="#94A3B8" />
-           <Text style={styles.navLabel}>Profil</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('ProfilSiswa')}>
+          <Ionicons name="person-outline" size={24} color="#94A3B8" />
+          <Text style={styles.navLabel}>Profil</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

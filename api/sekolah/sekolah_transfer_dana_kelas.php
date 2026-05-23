@@ -20,7 +20,7 @@ try {
     $db->beginTransaction();
 
     // 1. Hitung jumlah siswa di kelas tersebut
-    $stmt_count = $db->prepare("SELECT COUNT(*) as total FROM siswa WHERE sekolah_id = ? AND kelas = ? AND aktif = 1");
+    $stmt_count = $db->prepare("SELECT COUNT(*) as total FROM siswa WHERE sekolah_id = ? AND kelas = ? AND is_active = 1");
     $stmt_count->execute([$sekolah_id, $kelas]);
     $total_siswa = $stmt_count->fetch(PDO::FETCH_ASSOC)['total'];
 
@@ -42,7 +42,7 @@ try {
     }
 
     if ($sekolah['saldo'] < $total_transfer) {
-        throw new Exception("Saldo sekolah tidak mencukupi (Butuh: Rp " . number_format($total_transfer, 0, ',', '.') . ")");
+        throw new Exception("Saldo sekolah tidak mencukupi (Butuh: " . number_format($total_transfer, 0, ',', '.') . " PTS)");
     }
 
     // 3. Potong saldo sekolah
@@ -50,12 +50,12 @@ try {
     $stmt_update_sekolah->execute([$total_transfer, $sekolah_id]);
 
     // 4. Tambah saldo ke masing-masing siswa (Hasil pembagian rata)
-    $stmt_update_siswa = $db->prepare("UPDATE siswa SET saldo = saldo + ? WHERE sekolah_id = ? AND kelas = ? AND aktif = 1");
+    $stmt_update_siswa = $db->prepare("UPDATE siswa SET saldo = saldo + ? WHERE sekolah_id = ? AND kelas = ? AND is_active = 1");
     $stmt_update_siswa->execute([$amount_per_siswa, $sekolah_id, $kelas]);
 
     // 5. Catat ke activity_logs (Log Sekolah)
     $message = "Transfer Dana Kelas (Bagi Rata)";
-    $detail = "Distribusi total Rp " . number_format($total_transfer, 0, ',', '.') . " ke Kelas $kelas. Masing-masing dari $total_siswa siswa menerima Rp " . number_format($amount_per_siswa, 2, ',', '.') . ".";
+    $detail = "Transfer ke Kelas $kelas sebesar $total_transfer PTS. Masing-masing dari $total_siswa siswa menerima " . number_format($amount_per_siswa, 2, ',', '.') . " PTS.";
     
     $stmt_log = $db->prepare("INSERT INTO activity_logs (sekolah_id, type, message, detail) VALUES (?, 'TRANSFER_KELAS', ?, ?)");
     $stmt_log->execute([$sekolah_id, $message, $detail]);
@@ -63,7 +63,7 @@ try {
     // 6. Catat ke transaksi_siswa (Log Siswa Individual)
     $stmt_trans_siswa = $db->prepare("INSERT INTO transaksi_siswa (siswa_id, type, category, nominal, message) 
                                       SELECT id, 'masuk', 'Transfer', ?, ? FROM siswa 
-                                      WHERE sekolah_id = ? AND kelas = ? AND aktif = 1");
+                                      WHERE sekolah_id = ? AND kelas = ? AND is_active = 1");
     $stmt_trans_siswa->execute([$amount_per_siswa, "Penerimaan Dana Kelas $kelas", $sekolah_id, $kelas]);
 
     $db->commit();

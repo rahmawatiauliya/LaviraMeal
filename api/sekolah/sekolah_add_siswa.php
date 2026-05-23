@@ -73,10 +73,8 @@ try {
         ':qr_code' => $qr_token
     ]);
 
-    // 5. Update jumlah siswa di tabel sekolah agar dashboard sinkron
-    $stmtUpdate = $db->prepare("UPDATE sekolah SET jumlah_siswa = (SELECT COUNT(*) FROM siswa WHERE sekolah_id = :sid) WHERE id = :sid2");
-    $stmtUpdate->execute([':sid' => $sekolah_id, ':sid2' => $sekolah_id]);
-
+    // 5. Update jumlah siswa - REMOVED because column doesn't exist, count is computed
+    
     $db->commit();
 
     echo json_encode([

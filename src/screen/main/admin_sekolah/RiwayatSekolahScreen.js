@@ -58,8 +58,6 @@ export default function RiwayatSekolahScreen({ navigation }) {
   const getIcon = (type) => {
     switch (type) {
       case 'MINTA_SALDO': return "wallet-outline";
-      case 'DANA_KAGET': return "gift-outline";
-      case 'TRANSFER': return "send-outline";
       default: return "notifications-outline";
     }
   };
@@ -67,8 +65,6 @@ export default function RiwayatSekolahScreen({ navigation }) {
   const getColor = (type) => {
     switch (type) {
       case 'MINTA_SALDO': return BLUE_PRIMARY;
-      case 'DANA_KAGET': return GOLD;
-      case 'TRANSFER': return SUCCESS;
       default: return '#64748B';
     }
   };
@@ -76,8 +72,6 @@ export default function RiwayatSekolahScreen({ navigation }) {
   const getBgColor = (type) => {
     switch (type) {
       case 'MINTA_SALDO': return '#EEF2FF';
-      case 'DANA_KAGET': return '#FFFBEB';
-      case 'TRANSFER': return '#F0FDF4';
       default: return '#F1F5F9';
     }
   };

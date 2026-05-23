@@ -19,6 +19,7 @@ export default function LaporanKantinScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [errorOccurred, setErrorOccurred] = useState(false);
   const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState({
     total_pts: 0,
@@ -44,27 +45,15 @@ export default function LaporanKantinScreen({ navigation }) {
   const fetchData = useCallback(async (kantinId) => {
     if (!kantinId) return;
     try {
-      // setLoading(true);
-      // const res = await apiClient.get(`kantin/kantin_get_laporan.php?kantin_id=${kantinId}`);
-      // if (res.data.status === 'success') {
-      //   setStats(res.data.stats);
-      //   setRiwayat(res.data.riwayat);
-      // }
-      
-      // Mock data for now
-      setStats({
-        total_pts: 84,
-        total_transaksi: 84,
-        rata_rata: 1,
-        transaksi_minggu_ini: 250
-      });
-      setRiwayat([
-        { id: 1, nama: 'Siswa: Ahmad Fauzi', sub: 'Kelas 10-A · 14 Mei 2026', amount: 1 },
-        { id: 2, nama: 'Siswa: Siti Aminah', sub: 'Kelas 11-B · 14 Mei 2026', amount: 1 },
-        { id: 3, nama: 'Siswa: Budi Santoso', sub: 'Kelas 12-C · 13 Mei 2026', amount: 1 },
-      ]);
+      setErrorOccurred(false);
+      const res = await apiClient.get(`kantin/kantin_get_laporan.php?kantin_id=${kantinId}`);
+      if (res.data.status === 'success') {
+        setStats(res.data.stats);
+        setRiwayat(res.data.riwayat);
+      }
     } catch (error) {
       console.error('Fetch Laporan Error:', error);
+      setErrorOccurred(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -112,70 +101,100 @@ export default function LaporanKantinScreen({ navigation }) {
       </View>
 
       <View style={styles.whiteSection}>
-        <ScrollView 
-          showsVerticalScrollIndicator={false} 
-          contentContainerStyle={{ paddingBottom: 120 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          
-          <View style={styles.metricsGrid}>
-            <View style={styles.metricCard}>
-              <View style={[styles.iconBox, { backgroundColor: '#F0FDF4' }]}>
-                <Ionicons name="wallet" size={20} color={SUCCESS} />
-              </View>
-              <Text style={styles.metricVal}>{Number(stats.total_pts).toLocaleString('id-ID')}</Text>
-              <Text style={styles.metricLab}>Total PTS Didapat</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <View style={[styles.iconBox, { backgroundColor: '#EEF2FF' }]}>
-                <Ionicons name="receipt" size={20} color="#4F46E5" />
-              </View>
-              <Text style={styles.metricVal}>{stats.total_transaksi}</Text>
-              <Text style={styles.metricLab}>Total Transaksi</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <View style={[styles.iconBox, { backgroundColor: '#FFF7ED' }]}>
-                <Ionicons name="trending-up" size={20} color="#F59E0B" />
-              </View>
-              <Text style={styles.metricVal}>{stats.rata_rata}</Text>
-              <Text style={styles.metricLab}>Rata-rata PTS/Siswa</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <View style={[styles.iconBox, { backgroundColor: '#FAF5FF' }]}>
-                <Ionicons name="calendar" size={20} color="#8B5CF6" />
-              </View>
-              <Text style={styles.metricVal}>{stats.transaksi_minggu_ini}</Text>
-              <Text style={styles.metricLab}>Transaksi Minggu Ini</Text>
-            </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={BLUE_PRIMARY} />
+            <Text style={styles.loadingText}>Memuat Laporan Kantin...</Text>
           </View>
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Riwayat Transaksi Terkini</Text>
-              <View style={styles.realtimeBadge}>
-                 <View style={styles.liveDot} />
-                 <Text style={styles.realtimeText}>LIVE</Text>
-              </View>
-            </View>
-
-            <View style={styles.listContainer}>
-              {riwayat.map((item) => (
-                <View key={item.id} style={styles.listItem}>
-                  <View style={styles.listIconBox}>
-                    <Ionicons name="person" size={20} color={BLUE_PRIMARY} />
-                  </View>
-                  <View style={styles.listBody}>
-                    <Text style={styles.listTitle}>{item.nama}</Text>
-                    <Text style={styles.listSub}>{item.sub}</Text>
-                  </View>
-                  <View style={styles.listTail}>
-                    <Text style={[styles.listAmount, { color: SUCCESS }]}>+{item.amount} PTS</Text>
-                  </View>
+        ) : errorOccurred ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="cloud-offline-outline" size={56} color="#EF4444" />
+            <Text style={styles.errorTitle}>Gagal Terhubung ke Server</Text>
+            <Text style={styles.errorDesc}>
+              Pastikan XAMPP sedang berjalan aktif di laptop Anda, dan IP server di client.js sudah sesuai.
+            </Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => fetchData(userData?.id)}>
+              <Text style={styles.retryBtnText}>Hubungkan Ulang</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={{ paddingBottom: 120 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BLUE_PRIMARY]} />}
+          >
+            
+            <View style={styles.metricsGrid}>
+              <View style={styles.metricCard}>
+                <View style={[styles.iconBox, { backgroundColor: '#F0FDF4' }]}>
+                  <Ionicons name="wallet" size={20} color={SUCCESS} />
                 </View>
-              ))}
+                <Text style={styles.metricVal}>{Number(stats.total_pts).toLocaleString('id-ID')} PTS</Text>
+                <Text style={styles.metricLab}>Total Pendapatan</Text>
+                <Text style={styles.cashEstimate}>Estimasi: Rp {(stats.total_pts * 15000).toLocaleString('id-ID')}</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <View style={[styles.iconBox, { backgroundColor: '#EEF2FF' }]}>
+                  <Ionicons name="receipt" size={20} color="#4F46E5" />
+                </View>
+                <Text style={styles.metricVal}>{stats.total_transaksi}</Text>
+                <Text style={styles.metricLab}>Total Transaksi</Text>
+                <Text style={styles.metricSubNote}>Siswa terlayani</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <View style={[styles.iconBox, { backgroundColor: '#FFF7ED' }]}>
+                  <Ionicons name="trending-up" size={20} color="#F59E0B" />
+                </View>
+                <Text style={styles.metricVal}>{stats.rata_rata} PTS</Text>
+                <Text style={styles.metricLab}>Rata-rata/Siswa</Text>
+                <Text style={styles.metricSubNote}>Per porsi makanan</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <View style={[styles.iconBox, { backgroundColor: '#FAF5FF' }]}>
+                  <Ionicons name="calendar" size={20} color="#8B5CF6" />
+                </View>
+                <Text style={styles.metricVal}>{stats.transaksi_minggu_ini}</Text>
+                <Text style={styles.metricLab}>Minggu Ini</Text>
+                <Text style={styles.metricSubNote}>7 hari terakhir</Text>
+              </View>
             </View>
-          </View>
-        </ScrollView>
+
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Riwayat Transaksi Terkini</Text>
+                <View style={styles.realtimeBadge}>
+                   <View style={styles.liveDot} />
+                   <Text style={styles.realtimeText}>LIVE</Text>
+                </View>
+              </View>
+
+              <View style={styles.listContainer}>
+                {riwayat.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <MaterialCommunityIcons name="receipt-text-minus" size={48} color="#CBD5E1" />
+                    <Text style={styles.emptyTitle}>Belum Ada Transaksi</Text>
+                    <Text style={styles.emptyText}>Transaksi scan siswa akan muncul di sini secara realtime.</Text>
+                  </View>
+                ) : (
+                  riwayat.map((item) => (
+                    <View key={item.id} style={styles.listItem}>
+                      <View style={styles.listIconBox}>
+                        <Ionicons name="person" size={20} color={BLUE_PRIMARY} />
+                      </View>
+                      <View style={styles.listBody}>
+                        <Text style={styles.listTitle}>{item.nama}</Text>
+                        <Text style={styles.listSub}>{item.sub}</Text>
+                      </View>
+                      <View style={styles.listTail}>
+                        <Text style={[styles.listAmount, { color: SUCCESS }]}>+{item.amount} PTS</Text>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </View>
+            </View>
+          </ScrollView>
+        )}
       </View>
 
       {/* BOTTOM NAV */}
@@ -188,7 +207,7 @@ export default function LaporanKantinScreen({ navigation }) {
           <Ionicons name="bar-chart" size={24} color={BLUE_PRIMARY} />
           <Text style={[styles.navLabel, { color: BLUE_PRIMARY }]}>Laporan</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profil')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('ProfilKantin')}>
           <Ionicons name="person-outline" size={24} color="#94A3B8" />
           <Text style={styles.navLabel}>Profil</Text>
         </TouchableOpacity>
@@ -208,11 +227,22 @@ const styles = StyleSheet.create({
   
   whiteSection: { flex: 1, backgroundColor: '#F8FAFC', borderTopLeftRadius: 40, borderTopRightRadius: 40, paddingHorizontal: 25, paddingTop: 30, marginTop: -30 },
   
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
+  loadingText: { fontSize: 14, fontWeight: 'bold', color: '#94A3B8', marginTop: 15 },
+  
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60 },
+  errorTitle: { fontSize: 18, fontWeight: '900', color: BLUE_PRIMARY, marginTop: 20 },
+  errorDesc: { fontSize: 12, color: '#64748B', textAlign: 'center', marginTop: 10, lineHeight: 18 },
+  retryBtn: { backgroundColor: BLUE_PRIMARY, paddingHorizontal: 25, paddingVertical: 12, borderRadius: 15, marginTop: 25, elevation: 5 },
+  retryBtnText: { color: WHITE, fontSize: 14, fontWeight: 'bold' },
+
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 30 },
-  metricCard: { width: '48%', backgroundColor: WHITE, borderRadius: 24, padding: 20, marginBottom: 15, elevation: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
-  iconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
-  metricVal: { fontSize: 22, fontWeight: 'bold', color: BLUE_PRIMARY },
-  metricLab: { fontSize: 10, color: '#94A3B8', fontWeight: 'bold', marginTop: 5 },
+  metricCard: { width: '48%', backgroundColor: WHITE, borderRadius: 24, padding: 18, marginBottom: 15, elevation: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
+  iconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  metricVal: { fontSize: 20, fontWeight: '900', color: BLUE_PRIMARY },
+  metricLab: { fontSize: 9, color: '#94A3B8', fontWeight: '800', marginTop: 3, textTransform: 'uppercase' },
+  cashEstimate: { fontSize: 10, color: SUCCESS, fontWeight: 'bold', marginTop: 4 },
+  metricSubNote: { fontSize: 9, color: '#CBD5E1', fontWeight: 'bold', marginTop: 4 },
 
   section: { marginBottom: 30 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
@@ -229,6 +259,10 @@ const styles = StyleSheet.create({
   listSub: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
   listTail: { alignItems: 'flex-end' },
   listAmount: { fontSize: 14, fontWeight: 'bold' },
+
+  emptyContainer: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 },
+  emptyTitle: { fontSize: 15, fontWeight: 'bold', color: BLUE_PRIMARY, marginTop: 15 },
+  emptyText: { fontSize: 11, color: '#94A3B8', textAlign: 'center', marginTop: 5, lineHeight: 16 },
 
   bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 90, backgroundColor: WHITE, flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 20, borderTopLeftRadius: 35, borderTopRightRadius: 35, elevation: 50, alignItems: 'center' },
   navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },

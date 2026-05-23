@@ -92,3 +92,264 @@ FILES Data: Array
 Starting import for data_siswa.csv at 2026-05-12 21:36:48
 First line: NIS;Nama Lengkap;Kelas;Jenis Kelamin;Tanggal Lahir;Nama Wali;No Telp Wali;
 
+POST Data: Array
+(
+    [sekolah_id] => ef8db53c-7e13-4a4a-8911-e5ad1f0cae93
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira%20(1).csv
+            [full_path] => template_siswa_lavira%20(1).csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\phpAA8E.tmp
+            [error] => 0
+            [size] => 372
+        )
+
+)
+
+Starting import for template_siswa_lavira%20(1).csv at 2026-05-14 23:12:58
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+POST Data: Array
+(
+    [sekolah_id] => 80e4e417-0390-4c0d-9c38-31e832493122
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira%20(1).csv
+            [full_path] => template_siswa_lavira%20(1).csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\php90F1.tmp
+            [error] => 0
+            [size] => 372
+        )
+
+)
+
+Starting import for template_siswa_lavira%20(1).csv at 2026-05-16 12:18:51
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+POST Data: Array
+(
+    [sekolah_id] => 80e4e417-0390-4c0d-9c38-31e832493122
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira%20(1).csv
+            [full_path] => template_siswa_lavira%20(1).csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\php5A30.tmp
+            [error] => 0
+            [size] => 372
+        )
+
+)
+
+Starting import for template_siswa_lavira%20(1).csv at 2026-05-16 12:22:59
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+POST Data: Array
+(
+    [sekolah_id] => 80e4e417-0390-4c0d-9c38-31e832493122
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira%20(1).csv
+            [full_path] => template_siswa_lavira%20(1).csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\php56EC.tmp
+            [error] => 0
+            [size] => 372
+        )
+
+)
+
+Starting import for template_siswa_lavira%20(1).csv at 2026-05-16 12:25:09
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+POST Data: Array
+(
+    [sekolah_id] => 80e4e417-0390-4c0d-9c38-31e832493122
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira%20(1).csv
+            [full_path] => template_siswa_lavira%20(1).csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\php694D.tmp
+            [error] => 0
+            [size] => 372
+        )
+
+)
+
+Starting import for template_siswa_lavira%20(1).csv at 2026-05-16 12:25:14
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+POST Data: Array
+(
+    [sekolah_id] => 80e4e417-0390-4c0d-9c38-31e832493122
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira.csv
+            [full_path] => template_siswa_lavira.csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\php54CA.tmp
+            [error] => 0
+            [size] => 392
+        )
+
+)
+
+Starting import for template_siswa_lavira.csv at 2026-05-16 12:29:31
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+POST Data: Array
+(
+    [sekolah_id] => 80e4e417-0390-4c0d-9c38-31e832493122
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira.csv
+            [full_path] => template_siswa_lavira.csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\php5F4B.tmp
+            [error] => 0
+            [size] => 392
+        )
+
+)
+
+Starting import for template_siswa_lavira.csv at 2026-05-16 12:29:33
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+POST Data: Array
+(
+    [sekolah_id] => 80e4e417-0390-4c0d-9c38-31e832493122
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira.csv
+            [full_path] => template_siswa_lavira.csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\phpA1A.tmp
+            [error] => 0
+            [size] => 392
+        )
+
+)
+
+Starting import for template_siswa_lavira.csv at 2026-05-16 12:32:28
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+Header skipped. Starting loop...
+Processing Row: 3001 - Aditya Pratama
+Processing Row: 3002 - Citra Lestari
+Processing Row: 3003 - Farhan Saputra
+Processing Row: 3004 - Gita Permata
+Processing Row: 3005 - Rizky Ramadhan
+POST Data: Array
+(
+    [sekolah_id] => 80e4e417-0390-4c0d-9c38-31e832493122
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira-1.csv
+            [full_path] => template_siswa_lavira-1.csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\php5E29.tmp
+            [error] => 0
+            [size] => 1192
+        )
+
+)
+
+Starting import for template_siswa_lavira-1.csv at 2026-05-16 12:36:06
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+Header skipped. Starting loop...
+Processing Row: 4011 - Ari Wibowo
+Processing Row: 4012 - Citra Kirana
+Processing Row: 4013 - Dedi Corbuzier
+Processing Row: 4014 - Esti Wijayanti
+Processing Row: 4015 - Fadil Jaidi
+Processing Row: 4016 - Gita Gutawa
+Processing Row: 3011 - Hendra Setiawan
+Processing Row: 3012 - Indah Permatasari
+Processing Row: 3013 - jokoriyanto
+Processing Row: 3014 - Kartika Putri
+Processing Row: 3015 - Lukman Hakim
+Processing Row: 3016 - Maudy Ayunda
+Processing Row: 2071 - naufal aziz
+Processing Row: 2072 - Olivia Jensen
+Processing Row: 2073 - Putra Siregar
+Processing Row: 2074 - Queen Shasya
+Processing Row: 2075 - Rizky Billar
+Processing Row: 2076 - Sandrinna Michelle
+POST Data: Array
+(
+    [sekolah_id] => 6dcc628d-0a47-499e-ac02-71f306d852a3
+)
+
+FILES Data: Array
+(
+    [file] => Array
+        (
+            [name] => template_siswa_lavira%20(2).csv
+            [full_path] => template_siswa_lavira%20(2).csv
+            [type] => text/comma-separated-values
+            [tmp_name] => C:\xampp\tmp\php89BA.tmp
+            [error] => 0
+            [size] => 1009
+        )
+
+)
+
+Starting import for template_siswa_lavira%20(2).csv at 2026-05-19 12:11:06
+First line: nis;nama;kelas;jenis_kelamin;tanggal_lahir;nama_wali;no_telp_wali
+
+Header skipped. Starting loop...
+Processing Row: 11001 - Ahmad Rifai
+Processing Row: 11002 - Anisa Rahmawati
+Processing Row: 11003 - Bagas Saputra
+Processing Row: 11004 - Citra Lestari
+Processing Row: 11005 - Dika Pratama
+Processing Row: 12001 - Eka Wahyuni
+Processing Row: 12002 - Fajar Ramadhan
+Processing Row: 12003 - Gita Permata
+Processing Row: 12004 - Hendra Wijaya
+Processing Row: 12005 - Indah Cahyani
+Processing Row: 13001 - Kevin Sanjaya
+Processing Row: 13002 - Larasati Putri
+Processing Row: 13003 - Muhammad Rizky
+Processing Row: 13004 - Nabila Syahpiradita
+Processing Row: 13005 - Oki Setiawan
