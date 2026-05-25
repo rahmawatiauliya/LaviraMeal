@@ -16,7 +16,7 @@ import {
     ScrollView
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import apiClient from '../../../api/client';
+import apiClient, { IMAGE_BASE_URL } from '../../../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BLUE_PRIMARY = '#0F172A';
@@ -182,7 +182,7 @@ export default function MonitoringMenuScreen({ navigation }) {
                 </View>
                 {item.foto_menu && (
                     <Image 
-                        source={{ uri: `http://192.168.1.9/project_lavirameal/${item.foto_menu}` }} 
+                        source={{ uri: `${IMAGE_BASE_URL}${item.foto_menu}` }} 
                         style={styles.menuThumb} 
                     />
                 )}
@@ -269,7 +269,7 @@ export default function MonitoringMenuScreen({ navigation }) {
 
                                     {selectedMenu.foto_menu && (
                                         <Image 
-                                            source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedMenu.foto_menu}` }} 
+                                            source={{ uri: `${IMAGE_BASE_URL}${selectedMenu.foto_menu}` }} 
                                             style={styles.modalImage} 
                                             resizeMode="cover"
                                         />

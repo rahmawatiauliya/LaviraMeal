@@ -19,7 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import apiClient from '../../../api/client';
+import apiClient, { IMAGE_BASE_URL } from '../../../api/client';
 
 const BLUE_PRIMARY = '#0B1E3F';
 const BLUE_DARK = '#0F172A';
@@ -40,6 +40,7 @@ export default function HomeScreenGuru({ navigation }) {
     poin: 0,
     riwayat: []
   });
+    const [canteens, setCanteens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -50,12 +51,26 @@ export default function HomeScreenGuru({ navigation }) {
     loadInitialData();
   }, []);
 
+  const fetchCanteens = async (userId) => {
+    const idToUse = userId || userData?.id;
+    if (!idToUse) return;
+    try {
+      const response = await apiClient.get(`shared/get_active_canteens.php?user_id=${idToUse}`);
+      if (response.data && response.data.status === 'success') {
+        setCanteens(response.data.canteens || []);
+      }
+    } catch (error) {
+      console.error("Canteen fetch error:", error);
+    }
+  };
+
   // Refresh stats when screen focused
   useFocusEffect(
     React.useCallback(() => {
       if (userData?.id) {
         fetchStats(userData.id);
         fetchCanteenStats(userData.id);
+        fetchCanteens(userData.id);
       }
     }, [userData?.id])
   );
@@ -68,6 +83,7 @@ export default function HomeScreenGuru({ navigation }) {
         setUserData(user);
         await fetchStats(user.id);
         await fetchCanteenStats(user.id);
+        await fetchCanteens(user.id);
       }
     } catch (error) {
       console.error(error);
@@ -100,7 +116,9 @@ export default function HomeScreenGuru({ navigation }) {
           amount: parseFloat(x.nominal),
           type: x.type,
           created_at: x.created_at,
-          nama_kantin: x.nama_kantin
+          nama_kantin: x.nama_kantin,
+          kantin_id: x.kantin_id,
+          already_reviewed: parseInt(x.already_reviewed || 0)
         }));
         setCanteenStats({
           saldo: response.data.saldo,
@@ -113,11 +131,45 @@ export default function HomeScreenGuru({ navigation }) {
     }
   };
 
+  const getUnreviewedTransaction = () => {
+    if (!canteenStats?.riwayat) return null;
+    return canteenStats.riwayat.find(item => {
+      if (!item.kantin_id || item.already_reviewed === 1) return false;
+      const txDate = item.created_at ? new Date(item.created_at.replace(' ', 'T')) : new Date();
+      const diffTime = Math.abs(new Date() - txDate);
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      return diffDays <= 2;
+    });
+  };
+
+  const handleScanQR = () => {
+    const outstanding = getUnreviewedTransaction();
+    if (outstanding) {
+      Alert.alert(
+        "Ulasan Wajib",
+        "Anda wajib memberikan ulasan untuk transaksi sebelumnya sebelum dapat melakukan transaksi baru.",
+        [{
+          text: "Beri Ulasan Sekarang",
+          onPress: () => navigation.navigate('Feedback', {
+            canteenData: {
+              id: outstanding.kantin_id,
+              name: outstanding.nama_kantin || 'Kantin',
+              transaksi_id: outstanding.id
+            }
+          })
+        }]
+      );
+      return;
+    }
+    navigation.navigate('QRScanner');
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     if (userData?.id) {
       await fetchStats(userData.id);
       await fetchCanteenStats(userData.id);
+      await fetchCanteens(userData.id);
     }
     setRefreshing(false);
   };
@@ -128,8 +180,8 @@ export default function HomeScreenGuru({ navigation }) {
       "Apakah Anda yakin ingin keluar?",
       [
         { text: "Batal", style: "cancel" },
-        { 
-          text: "Logout", 
+        {
+          text: "Logout",
           style: "destructive",
           onPress: async () => {
             await AsyncStorage.clear();
@@ -151,8 +203,8 @@ export default function HomeScreenGuru({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
-      <ScrollView 
+
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BLUE_PRIMARY]} />}
       >
@@ -195,33 +247,106 @@ export default function HomeScreenGuru({ navigation }) {
                 <Text style={styles.pointNoteMini}>*1 Point = Rp 15.000</Text>
               </View>
               <TouchableOpacity style={styles.miniQrContainer} onPress={() => setShowQRModal(true)}>
-                 <QRCode 
-                    value={stats?.guru?.nip || userData?.username || String(userData?.id || 'LAVIRA-GURU')} 
-                    size={60} 
-                    color={BLUE_PRIMARY} 
-                 />
-                 <Text style={styles.miniQrText}>TAP QR</Text>
+                <QRCode
+                  value={stats?.guru?.nip || userData?.username || String(userData?.id || 'LAVIRA-GURU')}
+                  size={60}
+                  color={BLUE_PRIMARY}
+                />
+                <Text style={styles.miniQrText}>TAP QR</Text>
               </TouchableOpacity>
             </View>
           </View>
 
+          {(() => {
+            const outstanding = getUnreviewedTransaction();
+            if (outstanding) {
+              return (
+                <TouchableOpacity 
+                  style={styles.mandatoryReviewBanner}
+                  onPress={() => navigation.navigate('Feedback', {
+                    canteenData: {
+                      id: outstanding.kantin_id,
+                      name: outstanding.nama_kantin || 'Kantin',
+                      transaksi_id: outstanding.id
+                    }
+                  })}
+                >
+                  <Ionicons name="warning" size={22} color="#B45309" style={{ marginRight: 10 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.mandatoryReviewTitle}>Ulasan Wajib Pending!</Text>
+                    <Text style={styles.mandatoryReviewSub}>Anda wajib mengulas makan di {outstanding.nama_kantin || 'Kantin'} sebelum bisa scan QR baru.</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#B45309" />
+                </TouchableOpacity>
+              );
+            }
+            return null;
+          })()}
+
           {/* CANTEEN QUICK ACTIONS */}
           <View style={styles.actionGrid}>
-             <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('QRScanner')}>
-                <View style={[styles.actionIcon, { backgroundColor: '#F0FDF4' }]}><Ionicons name="scan" size={22} color={SUCCESS} /></View>
-                <Text style={styles.actionLabel}>Scan QR</Text>
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.actionItem} onPress={() => setShowQRModal(true)}>
-                <View style={[styles.actionIcon, { backgroundColor: '#EFF6FF' }]}><Ionicons name="qr-code" size={22} color={ACCENT} /></View>
-                <Text style={styles.actionLabel}>QR Saya</Text>
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('RiwayatGuru')}>
-                <View style={[styles.actionIcon, { backgroundColor: '#FDF2F8' }]}><Ionicons name="receipt" size={22} color="#D946EF" /></View>
-                <Text style={styles.actionLabel}>Riwayat</Text>
-             </TouchableOpacity>
+            <TouchableOpacity style={styles.actionItem} onPress={handleScanQR}>
+              <View style={[styles.actionIcon, { backgroundColor: '#F0FDF4' }]}><Ionicons name="scan" size={22} color={SUCCESS} /></View>
+              <Text style={styles.actionLabel}>Scan QR</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionItem} onPress={() => setShowQRModal(true)}>
+              <View style={[styles.actionIcon, { backgroundColor: '#EFF6FF' }]}><Ionicons name="qr-code" size={22} color={ACCENT} /></View>
+              <Text style={styles.actionLabel}>QR Saya</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('RiwayatGuru')}>
+              <View style={[styles.actionIcon, { backgroundColor: '#FDF2F8' }]}><Ionicons name="receipt" size={22} color="#D946EF" /></View>
+              <Text style={styles.actionLabel}>Riwayat</Text>
+            </TouchableOpacity>
           </View>
 
 
+
+                    {/* MITRA KANTIN SECTION */}
+          <View style={{ marginBottom: 25 }}>
+            <Text style={styles.sectionTitle}>Mitra Kantin MBG</Text>
+            <Text style={styles.sectionSubtitle}>Ketuk kantin untuk melihat ulasan dan rating</Text>
+            
+            {canteens.length > 0 ? (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={{ gap: 15, paddingTop: 15, paddingBottom: 5 }}
+              >
+                {canteens.map((canteen) => (
+                  <TouchableOpacity 
+                    key={canteen.id} 
+                    style={styles.canteenCardItem}
+                    onPress={() => navigation.navigate('CanteenFeedback', {
+                      kantin_id: canteen.id,
+                      nama_kantin: canteen.nama_kantin,
+                      foto_kantin: canteen.foto_kantin
+                    })}
+                  >
+                    <Image 
+                      source={{ uri: canteen.foto_kantin ? `${IMAGE_BASE_URL}${canteen.foto_kantin}` : 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=300' }} 
+                      style={styles.canteenItemImg} 
+                    />
+                    <View style={styles.canteenItemInfo}>
+                      <Text style={styles.canteenItemName} numberOfLines={1}>{canteen.nama_kantin}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                        <Ionicons name="person" size={10} color="#94A3B8" />
+                        <Text style={styles.canteenItemOwner} numberOfLines={1}>{canteen.pemilik || 'Pemilik'}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                        <Ionicons name="call" size={10} color="#94A3B8" />
+                        <Text style={styles.canteenItemOwner} numberOfLines={1}>{canteen.no_telp || '-'}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.emptyCanteens}>
+                <Ionicons name="storefront-outline" size={32} color="#CBD5E1" />
+                <Text style={styles.emptyCanteensText}>Tidak ada mitra kantin aktif</Text>
+              </View>
+            )}
+          </View>
 
           {/* CANTEEN RECENT ACTIVITY */}
           <View style={styles.activityHeader}>
@@ -232,32 +357,78 @@ export default function HomeScreenGuru({ navigation }) {
           </View>
 
           {canteenStats.riwayat.length > 0 ? canteenStats.riwayat.slice(0, 2).map((item, idx) => (
-             <TouchableOpacity 
-                key={idx} 
-                style={styles.activityCard} 
-                onPress={() => {
-                  setSelectedTransaction(item);
-                  setShowDetailModal(true);
-                }}
-             >
+            <TouchableOpacity
+              key={idx}
+              style={[styles.activityCard, { flexDirection: 'column', alignItems: 'stretch' }]}
+              onPress={() => {
+                setSelectedTransaction(item);
+                setShowDetailModal(true);
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View style={styles.activityIcon}>
-                  <Ionicons 
-                    name={item.type === 'masuk' ? "arrow-down-circle" : "fast-food-outline"} 
-                    size={20} 
-                    color={item.type === 'masuk' ? SUCCESS : BLUE_PRIMARY} 
+                  <Ionicons
+                    name={item.type === 'masuk' ? "arrow-down-circle" : "fast-food-outline"}
+                    size={20}
+                    color={item.type === 'masuk' ? SUCCESS : BLUE_PRIMARY}
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                   <Text style={styles.activityName}>{item.message}</Text>
-                   <Text style={styles.activityTime}>{item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '-'}</Text>
+                  <Text style={styles.activityName}>{item.message}</Text>
+                  <Text style={styles.activityTime}>{item.created_at ? new Date(item.created_at.replace(' ', 'T')).toLocaleString('id-ID') : '-'}</Text>
                 </View>
                 <Text style={[styles.activityAmount, { color: item.type === 'masuk' ? SUCCESS : '#EF4444' }]}>
                   {item.type === 'masuk' ? '+' : '-'}{item.amount} PTS
                 </Text>
-             </TouchableOpacity>
+              </View>
+              
+              {item.kantin_id && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="storefront-outline" size={14} color="#64748B" />
+                    <Text style={{ fontSize: 12, color: '#64748B', fontWeight: 'bold' }}>{item.nama_kantin || 'Kantin'}</Text>
+                  </View>
+                  {item.already_reviewed === 1 ? (
+                    <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+                      <Text style={{ fontSize: 10, color: '#10B981', fontWeight: 'bold' }}>Sudah Diulas</Text>
+                    </View>
+                  ) : (
+                    (() => {
+                      const txDate = item.created_at ? new Date(item.created_at.replace(' ', 'T')) : new Date();
+                      const diffTime = Math.abs(new Date() - txDate);
+                      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+                      if (diffDays <= 2) {
+                        return (
+                          <TouchableOpacity 
+                            style={{ backgroundColor: '#F59E0B', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                            onPress={() => navigation.navigate('Feedback', {
+                              canteenData: {
+                                id: item.kantin_id,
+                                name: item.nama_kantin || 'Kantin',
+                                transaksi_id: item.id
+                              }
+                            })}
+                          >
+                            <Ionicons name="star" size={12} color="#FFFFFF" />
+                            <Text style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 'bold' }}>Beri Ulasan</Text>
+                          </TouchableOpacity>
+                        );
+                      } else {
+                        return (
+                          <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                            <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: 'bold' }}>Batas Ulasan Habis</Text>
+                          </View>
+                        );
+                      }
+                    })()
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
           )) : (
             <View style={styles.emptyActivity}>
-               <Text style={styles.emptyText}>Belum ada riwayat transaksi</Text>
+              <Text style={styles.emptyText}>Belum ada riwayat transaksi</Text>
             </View>
           )}
         </View>
@@ -267,20 +438,20 @@ export default function HomeScreenGuru({ navigation }) {
 
       {/* BOTTOM NAV */}
       <View style={styles.bottomNav}>
-         <TouchableOpacity style={styles.navItem}>
-           <Ionicons name="grid" size={24} color={BLUE_PRIMARY} />
-           <Text style={[styles.navLabel, {color: BLUE_PRIMARY}]}>Home</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="grid" size={24} color={BLUE_PRIMARY} />
+          <Text style={[styles.navLabel, { color: BLUE_PRIMARY }]}>Home</Text>
+        </TouchableOpacity>
 
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('RiwayatGuru')}>
-           <Ionicons name="receipt-outline" size={24} color="#94A3B8" />
-           <Text style={styles.navLabel}>Riwayat</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('RiwayatGuru')}>
+          <Ionicons name="receipt-outline" size={24} color="#94A3B8" />
+          <Text style={styles.navLabel}>Riwayat</Text>
+        </TouchableOpacity>
 
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('ProfilGuru')}>
-           <Ionicons name="person-outline" size={24} color="#94A3B8" />
-           <Text style={styles.navLabel}>Profil</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('ProfilGuru')}>
+          <Ionicons name="person-outline" size={24} color="#94A3B8" />
+          <Text style={styles.navLabel}>Profil</Text>
+        </TouchableOpacity>
       </View>
 
       {/* QR MODAL */}
@@ -296,13 +467,13 @@ export default function HomeScreenGuru({ navigation }) {
 
             <View style={styles.qrModalContent}>
               <Text style={styles.qrNote}>Tunjukkan QR ini ke petugas kantin untuk pengambilan makan.</Text>
-              
+
               <View style={styles.qrWrapperModal}>
                 <View style={styles.qrBgModal}>
-                  <QRCode 
-                    value={stats?.guru?.nip || userData?.username || String(userData?.id || 'LAVIRA-GURU')} 
-                    size={200} 
-                    color={BLUE_PRIMARY} 
+                  <QRCode
+                    value={stats?.guru?.nip || userData?.username || String(userData?.id || 'LAVIRA-GURU')}
+                    size={200}
+                    color={BLUE_PRIMARY}
                   />
                 </View>
               </View>
@@ -333,10 +504,10 @@ export default function HomeScreenGuru({ navigation }) {
 
             <View style={{ alignItems: 'center', marginBottom: 25 }}>
               <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: selectedTransaction?.type === 'masuk' ? '#F0FDF4' : '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-                <Ionicons 
-                  name={selectedTransaction?.type === 'masuk' ? "arrow-down" : "restaurant"} 
-                  size={32} 
-                  color={selectedTransaction?.type === 'masuk' ? SUCCESS : '#EF4444'} 
+                <Ionicons
+                  name={selectedTransaction?.type === 'masuk' ? "arrow-down" : "restaurant"}
+                  size={32}
+                  color={selectedTransaction?.type === 'masuk' ? SUCCESS : '#EF4444'}
                 />
               </View>
               <Text style={{ fontSize: 13, color: '#64748B', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -375,6 +546,50 @@ export default function HomeScreenGuru({ navigation }) {
                 </View>
               )}
 
+              {selectedTransaction?.type === 'keluar' && selectedTransaction?.kantin_id && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>STATUS ULASAN</Text>
+                  {selectedTransaction?.already_reviewed === 1 ? (
+                    <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+                      <Text style={{ fontSize: 10, color: '#10B981', fontWeight: 'bold' }}>Sudah Diulas</Text>
+                    </View>
+                  ) : (
+                    (() => {
+                      const txDate = selectedTransaction?.created_at ? new Date(selectedTransaction.created_at.replace(' ', 'T')) : new Date();
+                      const diffTime = Math.abs(new Date() - txDate);
+                      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+                      if (diffDays <= 2) {
+                        return (
+                          <TouchableOpacity 
+                            style={{ backgroundColor: '#F59E0B', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                            onPress={() => {
+                              setShowDetailModal(false);
+                              navigation.navigate('Feedback', {
+                                canteenData: {
+                                  id: selectedTransaction.kantin_id,
+                                  name: selectedTransaction.nama_kantin || 'Kantin',
+                                  transaksi_id: selectedTransaction.id
+                                }
+                              });
+                            }}
+                          >
+                            <Ionicons name="star" size={12} color="#FFFFFF" />
+                            <Text style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 'bold' }}>Beri Ulasan</Text>
+                          </TouchableOpacity>
+                        );
+                      } else {
+                        return (
+                          <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                            <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: 'bold' }}>Batas Ulasan Habis</Text>
+                          </View>
+                        );
+                      }
+                    })()
+                  )}
+                </View>
+              )}
+
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
                 <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>KETERANGAN</Text>
                 <Text style={{ fontSize: 12, color: BLUE_DARK, fontWeight: '700', flex: 1, textAlign: 'right', marginLeft: 15 }} numberOfLines={2}>
@@ -385,7 +600,7 @@ export default function HomeScreenGuru({ navigation }) {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
                 <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>WAKTU</Text>
                 <Text style={{ fontSize: 12, color: BLUE_DARK, fontWeight: '700' }}>
-                  {selectedTransaction?.created_at ? new Date(selectedTransaction?.created_at).toLocaleString('id-ID') : '-'}
+                  {selectedTransaction?.created_at ? new Date(selectedTransaction?.created_at.replace(' ', 'T')).toLocaleString('id-ID') : '-'}
                 </Text>
               </View>
 
@@ -423,7 +638,7 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
   notifDot: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', borderWidth: 1.5, borderColor: BLUE_PRIMARY },
-  
+
   walletCard: { backgroundColor: WHITE, borderRadius: 28, padding: 22, elevation: 15, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15, marginBottom: 30, marginTop: -30, marginHorizontal: 25 },
   walletInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   walletLabel: { fontSize: 11, color: '#94A3B8', fontWeight: '800', textTransform: 'uppercase' },
@@ -447,7 +662,7 @@ const styles = StyleSheet.create({
   summarySub: { fontSize: 11, color: GOLD, fontWeight: '700' },
   progressCircle: { justifyContent: 'center', alignItems: 'center' },
   progressBg: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  
+
   menuGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   menuItem: { width: (width - 90) / 3, alignItems: 'center', marginBottom: 20 },
   menuIconBox: { width: 54, height: 54, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 8, elevation: 2 },
@@ -456,7 +671,6 @@ const styles = StyleSheet.create({
   activityHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   viewAll: { fontSize: 12, color: BLUE_PRIMARY, fontWeight: '800' },
   activityCard: { backgroundColor: WHITE, flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 20, marginBottom: 12, elevation: 2 },
-  activityIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
   activityName: { fontSize: 13, fontWeight: '700', color: BLUE_DARK },
   activityTime: { fontSize: 10, color: '#94A3B8', marginTop: 3 },
   activityAmount: { fontSize: 14, fontWeight: '900', color: '#EF4444' },
@@ -479,5 +693,80 @@ const styles = StyleSheet.create({
   infoName: { fontSize: 18, fontWeight: 'bold', color: BLUE_DARK },
   infoNis: { fontSize: 13, color: '#94A3B8', marginTop: 4, fontWeight: '600' },
   closeBtn: { backgroundColor: BLUE_PRIMARY, width: '100%', height: 55, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  closeBtnText: { color: WHITE, fontSize: 16, fontWeight: 'bold' }
+  closeBtnText: { color: WHITE, fontSize: 16, fontWeight: 'bold' },
+  
+  canteenCardItem: {
+    backgroundColor: WHITE,
+    borderRadius: 20,
+    width: 160,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  canteenItemImg: {
+    width: '100%',
+    height: 100,
+    backgroundColor: '#E2E8F0',
+  },
+  canteenItemInfo: {
+    padding: 12,
+  },
+  canteenItemName: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: BLUE_DARK,
+  },
+  canteenItemOwner: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  emptyCanteens: {
+    backgroundColor: WHITE,
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  emptyCanteensText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '600',
+    marginTop: 6,
+  },
+
+  mandatoryReviewBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 25,
+    elevation: 3,
+    shadowColor: '#B45309',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+  },
+  mandatoryReviewTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#B45309',
+  },
+  mandatoryReviewSub: {
+    fontSize: 11,
+    color: '#D97706',
+    fontWeight: '500',
+    marginTop: 2,
+    lineHeight: 15,
+  }
 });

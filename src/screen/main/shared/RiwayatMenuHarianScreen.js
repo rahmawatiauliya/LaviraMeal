@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import apiClient from '../../../api/client';
+import apiClient, { IMAGE_BASE_URL } from '../../../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BLUE_PRIMARY = '#0B1E3F';
@@ -100,7 +100,7 @@ export default function RiwayatMenuHarianScreen({ navigation }) {
         </View>
         {item.foto_menu && (
           <Image 
-            source={{ uri: `http://192.168.1.9/project_lavirameal/${item.foto_menu}` }} 
+            source={{ uri: `${IMAGE_BASE_URL}${item.foto_menu}` }} 
             style={styles.thumb} 
           />
         )}
@@ -166,7 +166,7 @@ export default function RiwayatMenuHarianScreen({ navigation }) {
                                 
                                 {selectedItem.foto_menu && (
                                     <Image 
-                                        source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedItem.foto_menu}` }} 
+                                        source={{ uri: `${IMAGE_BASE_URL}${selectedItem.foto_menu}` }} 
                                         style={styles.modalImg}
                                         resizeMode="cover"
                                     />

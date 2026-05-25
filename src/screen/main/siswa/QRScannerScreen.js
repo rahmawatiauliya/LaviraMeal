@@ -48,7 +48,7 @@ export default function QRScannerScreen({ navigation }) {
   const handleBarcodeScanned = async ({ type, data }) => {
     if (scanned) return;
     setScanned(true);
-    
+
     // Identifikasi apakah ini QR Kantin (Case-insensitive)
     const upperData = data.toUpperCase();
     if (upperData.includes('KANTIN') || upperData.startsWith('K')) {
@@ -58,47 +58,50 @@ export default function QRScannerScreen({ navigation }) {
         `Apakah Anda yakin ingin melakukan transaksi makan di ${canteenName}? (1 PTS)`,
         [
           { text: "Batal", onPress: () => setScanned(false), style: "cancel" },
-          { 
-            text: "Proses", 
+          {
+            text: "Proses",
             onPress: async () => {
               try {
                 // Get the real logged in user ID
                 const userDataStr = await AsyncStorage.getItem('user_data');
                 if (!userDataStr) {
-                    Alert.alert("Error", "Sesi pengguna tidak valid.");
-                    setScanned(false);
-                    return;
+                  Alert.alert("Error", "Sesi pengguna tidak valid.");
+                  setScanned(false);
+                  return;
                 }
                 const userData = JSON.parse(userDataStr);
-                
+
+                const endpoint = userRole === 'guru' ? 'guru/guru_proses_makan.php' : 'siswa/siswa_proses_makan.php';
+                const payload = userRole === 'guru' ? {
+                  guru_id: userData.id,
+                  kantin_qr: data
+                } : {
+                  siswa_id: userData.id,
+                  kantin_qr: data
+                };
+
                 // CALL REAL API
-                const response = await apiClient.post('siswa/siswa_proses_makan.php', {
-                    siswa_id: userData.id,
-                    kantin_qr: data
-                });
+                const response = await apiClient.post(endpoint, payload);
 
                 if (response.data && response.data.status === 'success') {
-                    // Berhasil diproses, arahkan ke Layar Feedback
-                    Alert.alert(
-                      "Transaksi Berhasil",
-                      `Menu: ${response.data.menu_name}\nSaldo dipotong: ${response.data.deducted} PTS\n\nSilakan berikan ulasan Anda!`,
-                      [{
-                          text: "Lanjutkan",
-                          onPress: () => {
-                              navigation.replace('Feedback', { 
-                                canteenData: { 
-                                  name: response.data.kantin_name, 
-                                  id: response.data.kantin_id,
-                                  amount: response.data.deducted,
-                                  transaksi_id: response.data.transaksi_id
-                                } 
-                              });
-                          }
-                      }]
-                    );
+                  // Berhasil diproses, arahkan kembali langsung ke Home sesuai role
+                  Alert.alert(
+                    "Transaksi Berhasil",
+                    `Menu: ${response.data.menu_name}\nSaldo dipotong: ${response.data.deducted} PTS\n\nTransaksi Anda berhasil diselesaikan!`,
+                    [{
+                      text: "Selesai",
+                      onPress: () => {
+                        if (userRole === 'guru') {
+                          navigation.replace('HomeGuru');
+                        } else {
+                          navigation.replace('HomeSiswa');
+                        }
+                      }
+                    }]
+                  );
                 } else {
-                    Alert.alert("Transaksi Gagal", response.data.message || "Terjadi kesalahan.");
-                    setScanned(false);
+                  Alert.alert("Transaksi Gagal", response.data.message || "Terjadi kesalahan.");
+                  setScanned(false);
                 }
               } catch (e) {
                 console.log(e);

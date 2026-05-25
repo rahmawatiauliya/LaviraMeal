@@ -140,9 +140,7 @@ export default function RegisterKantinScreen({ navigation }) {
         type: `image/${uriM.split('.').pop()}` 
       });
 
-      const response = await apiClient.post('auth/register_kantin.php', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = await apiClient.post('auth/register_kantin.php', data);
 
       if (response.data.status === 'success') {
         Alert.alert("Pendaftaran Berhasil", response.data.message, [

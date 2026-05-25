@@ -25,13 +25,7 @@ import apiClient from '../../../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const BLUE_PRIMARY = '#1C2C5B';
-const BLUE_DARK = '#0F172A';
-const GOLD = '#D4AF37';
-const WHITE = '#FFFFFF';
-const SUCCESS = '#10B981';
-const DANGER = '#F43F5E';
-const SOFT_BG = '#F5F7FA';
+import styles, { BLUE_PRIMARY, BLUE_DARK, GOLD, WHITE, SUCCESS, DANGER, SOFT_BG } from './ManajemenKelasStyles';
 
 export default function ManajemenKelasScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -425,16 +419,25 @@ export default function ManajemenKelasScreen({ navigation }) {
 
       const formData = new FormData();
       formData.append('sekolah_id', userData.sekolah_id);
-      formData.append('file', {
-        uri: file.uri,
-        name: file.name,
-        type: file.mimeType || 'text/csv',
-      });
+      
+      if (Platform.OS === 'web') {
+        // Untuk platform Web, expo-document-picker mengembalikan object File asli di properti .file
+        formData.append('file', file.file);
+      } else {
+        // Untuk Android/iOS, gunakan format { uri, name, type }
+        formData.append('file', {
+          uri: file.uri,
+          name: file.name,
+          type: file.mimeType || 'text/csv',
+        });
+      }
 
       const endpoint = viewMode === 'guru' ? 'sekolah/sekolah_import_guru.php' : `sekolah/sekolah_import_siswa.php?sekolah_id=${userData.sekolah_id}`;
       
       const response = await apiClient.post(endpoint, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       if (response.data.status === 'success') {
@@ -807,7 +810,7 @@ export default function ManajemenKelasScreen({ navigation }) {
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryVal}>{selectedTingkatData.jumlah_kelas}</Text>
-                  <Text style={styles.summaryLab}>Rombel</Text>
+                  <Text style={styles.summaryLab}>Kelas</Text>
                 </View>
               </View>
 
@@ -1128,193 +1131,3 @@ export default function ManajemenKelasScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLUE_PRIMARY },
-  centered: { width: '100%', maxWidth: 1000, alignSelf: 'center' },
-  header: { height: 140, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, overflow: 'hidden' },
-  batikOverlay: { ...StyleSheet.absoluteFillObject, opacity: 0.1, resizeMode: 'repeat' },
-  headerContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 25, marginTop: 15, height: 60 },
-  backButton: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { flex: 1, marginLeft: 15, fontSize: 18, fontWeight: '900', color: WHITE, letterSpacing: 0.5 },
-  headerActions: { flexDirection: 'row', alignItems: 'center' },
-  actionIcon: { marginLeft: 12, width: 38, height: 38, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-
-  body: { flex: 1, backgroundColor: SOFT_BG, borderTopLeftRadius: 40, borderTopRightRadius: 40, marginTop: -30 },
-  tabWrapper: { paddingVertical: 20 },
-  tabScroll: { paddingHorizontal: 25 },
-  tab: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 15, backgroundColor: WHITE, marginRight: 10, elevation: 2 },
-  tabActive: { backgroundColor: BLUE_PRIMARY },
-  tabLabel: { fontSize: 13, fontWeight: 'bold', color: '#64748B' },
-  tabLabelActive: { color: WHITE },
-
-  scrollBody: { paddingBottom: 120 },
-  summaryCard: { marginHorizontal: 25, backgroundColor: WHITE, borderRadius: 25, padding: 20, flexDirection: 'row', alignItems: 'center', elevation: 10, shadowOpacity: 0.1 },
-  summaryItem: { flex: 1, alignItems: 'center' },
-  summaryVal: { fontSize: 22, fontWeight: '900', color: BLUE_PRIMARY },
-  summaryLab: { fontSize: 11, color: '#94A3B8', fontWeight: 'bold', marginTop: 4 },
-  summaryDivider: { width: 1, height: 30, backgroundColor: '#E2E8F0' },
-  templateBtn: { alignItems: 'center' },
-  templateBtnText: { fontSize: 9, fontWeight: 'bold', color: BLUE_PRIMARY, marginTop: 4 },
-
-  inviteCard: { marginHorizontal: 25, marginTop: 15, backgroundColor: WHITE, borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', elevation: 3 },
-  inviteIcon: { width: 45, height: 45, borderRadius: 12, backgroundColor: '#FEFCE8', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  inviteTitle: { fontSize: 10, fontWeight: 'bold', color: '#94A3B8', textTransform: 'uppercase' },
-  inviteCodeText: { fontSize: 18, fontWeight: '900', color: BLUE_PRIMARY, marginTop: 2 },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: BLUE_PRIMARY,
-    marginVertical: 15,
-    paddingHorizontal: 25,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingRight: 25,
-  },
-  sectionHeaderGuru: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  verifyAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  verifyAllText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: SUCCESS,
-    marginLeft: 5,
-  },
-  listContainer: { paddingHorizontal: 25 },
-  
-  classCard: { backgroundColor: WHITE, borderRadius: 20, padding: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, elevation: 2 },
-  classCardLeft: { flexDirection: 'row', alignItems: 'center' },
-  classIcon: { width: 45, height: 45, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  classIconText: { fontSize: 18, fontWeight: '900' },
-  classTitle: { fontSize: 15, fontWeight: 'bold', color: BLUE_DARK },
-  classSubtitle: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
-  classCardRight: { flexDirection: 'row', alignItems: 'center' },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginRight: 10 },
-  badgeText: { fontSize: 9, fontWeight: '900' },
-
-  siswaRow: { backgroundColor: WHITE, padding: 15, borderRadius: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, elevation: 2 },
-  siswaLeft: { flexDirection: 'row', alignItems: 'center' },
-  siswaAvatar: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  avatarText: { fontSize: 16, fontWeight: 'bold', color: BLUE_PRIMARY },
-  siswaName: { fontSize: 14, fontWeight: 'bold', color: BLUE_DARK },
-  siswaDetail: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
-  siswaRight: { alignItems: 'flex-end' },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  verifiedText: { fontSize: 9, fontWeight: 'bold', color: SUCCESS, marginLeft: 4 },
-  siswaActions: { flexDirection: 'row', alignItems: 'center' },
-  deleteBtn: { marginLeft: 15, padding: 5 },
-  verifyBtn: { backgroundColor: BLUE_PRIMARY, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  verifyBtnText: { color: WHITE, fontSize: 11, fontWeight: 'bold' },
-
-  emptyState: { alignItems: 'center', marginTop: 50 },
-  emptyIllustration: { width: 120, height: 120, borderRadius: 60, backgroundColor: WHITE, justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 4 },
-  emptyText: { color: BLUE_DARK, fontSize: 16, fontWeight: 'bold' },
-  emptySub: { color: '#94A3B8', fontSize: 12, marginTop: 5, textAlign: 'center' },
-
-  // TEACHER CARD STYLES
-  teacherCard: { backgroundColor: WHITE, borderRadius: 24, padding: 20, marginBottom: 15, elevation: 4, shadowColor: BLUE_PRIMARY, shadowOpacity: 0.1, shadowRadius: 10, borderWidth: 1, borderColor: '#F1F5F9' },
-  teacherTop: { flexDirection: 'row', alignItems: 'center' },
-  teacherAvatar: { width: 54, height: 54, borderRadius: 18, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  teacherAvatarText: { fontSize: 20, fontWeight: '900', color: '#6366F1' },
-  teacherMainInfo: { flex: 1 },
-  teacherName: { fontSize: 16, fontWeight: 'bold', color: BLUE_DARK },
-  teacherMeta: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
-  teacherDeleteBtn: { padding: 8, backgroundColor: '#FFF1F2', borderRadius: 12 },
-  teacherDivider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 15 },
-  teacherBottom: { flexDirection: 'row', gap: 10 },
-  infoPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F3FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, gap: 5 },
-  infoPillText: { fontSize: 10, fontWeight: '800', color: '#6366F1' },
-  teacherStatus: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 15, borderTopWidth: 1, borderTopColor: '#F8FAFC', paddingTop: 10 },
-  teacherStatusLeft: { flexDirection: 'row', alignItems: 'center' },
-  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 8 },
-  statusText: { fontSize: 11, color: '#94A3B8', fontWeight: 'bold' },
-  verifyGuruBtn: { backgroundColor: BLUE_PRIMARY, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  verifyGuruBtnText: { color: WHITE, fontSize: 11, fontWeight: 'bold' },
-  sectionTitleGuru: { fontSize: 15, fontWeight: '800', color: BLUE_PRIMARY },
-
-  guruHeaderCard: { backgroundColor: '#6366F1', padding: 20, borderRadius: 24, flexDirection: 'row', alignItems: 'center', marginBottom: 25, elevation: 8, shadowColor: '#6366F1', shadowOpacity: 0.3 },
-  guruHeaderIcon: { width: 50, height: 50, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  guruHeaderTitle: { fontSize: 18, fontWeight: '900', color: WHITE },
-  guruHeaderSub: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-
-  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 90, backgroundColor: WHITE, borderTopLeftRadius: 35, borderTopRightRadius: 35, elevation: 50, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20 },
-  bottomNavInner: { flex: 1, flexDirection: 'row', paddingBottom: 20, alignItems: 'center' },
-  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  navLabel: { fontSize: 10, fontWeight: 'bold', color: '#94A3B8', marginTop: 4 },
-
-  // MODAL STYLES (REALISTIC)
-  addModalContent: { backgroundColor: WHITE, borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 30, maxHeight: '95%', width: '100%' },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  pinTitle: { fontSize: 20, fontWeight: '900', color: BLUE_PRIMARY },
-  pinSubtitle: { fontSize: 12, color: '#64748b', marginTop: 8, lineHeight: 18 },
-  pinInputGroup: { marginBottom: 18 },
-  pinInputLabel: { fontSize: 11, fontWeight: 'bold', color: '#94a3b8', marginBottom: 8, textTransform: 'uppercase' },
-  pinInputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: 16, paddingHorizontal: 15, height: 55, borderWidth: 1, borderColor: '#f1f5f9' },
-  pinInput: { flex: 1, marginLeft: 12, fontSize: 14, color: BLUE_PRIMARY, fontWeight: 'bold' },
-  pinSubmit: { backgroundColor: BLUE_PRIMARY, height: 55, borderRadius: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 15, gap: 10, elevation: 8 },
-  pinSubmitTxt: { color: WHITE, fontSize: 15, fontWeight: 'bold' },
-
-  // Guide Modal Styles (Fixed Overlapping)
-  templateModal: {
-    backgroundColor: WHITE,
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 35,
-    width: '100%',
-    maxHeight: '85%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    elevation: 24,
-  },
-  modalHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingBottom: 15,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: BLUE_PRIMARY,
-  },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(2, 8, 24, 0.7)', justifyContent: 'flex-end', alignItems: 'center' },
-  modalWrap: { width: '100%', maxWidth: 500 },
-  guideText: { fontSize: 13, color: '#64748B', lineHeight: 20, marginBottom: 15, fontWeight: 'bold' },
-  tableHead: { flexDirection: 'row', backgroundColor: '#F1F5F9', padding: 12, borderTopLeftRadius: 10, borderTopRightRadius: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-  tableHeadText: { fontSize: 11, fontWeight: 'bold', color: BLUE_PRIMARY, flex: 1 },
-  tableRow: { flexDirection: 'row', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', backgroundColor: WHITE },
-  tableCell: { fontSize: 11, flex: 1, color: BLUE_DARK },
-  guideItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  guideItemText: { fontSize: 12, color: '#64748B', marginLeft: 10, flex: 1 },
-  downloadActionBtn: { backgroundColor: SUCCESS, height: 55, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20, gap: 10 },
-  downloadActionText: { color: WHITE, fontSize: 14, fontWeight: 'bold' },
-  inputGroup: { marginBottom: 15 },
-  inputLabel: { fontSize: 11, fontWeight: 'bold', color: '#94A3B8', marginBottom: 6, textTransform: 'uppercase' },
-  input: { backgroundColor: '#F8FAFC', height: 55, borderRadius: 15, paddingHorizontal: 15, fontSize: 14, fontWeight: 'bold', color: BLUE_PRIMARY, borderWidth: 1, borderColor: '#E2E8F0' },
-  submitBtn: { backgroundColor: BLUE_PRIMARY, height: 55, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 10, elevation: 5 },
-  submitBtnText: { color: WHITE, fontSize: 16, fontWeight: 'bold' }
-});

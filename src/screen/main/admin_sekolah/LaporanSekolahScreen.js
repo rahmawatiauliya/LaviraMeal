@@ -86,7 +86,11 @@ export default function LaporanSekolahScreen({ navigation }) {
       setLoading(true);
       const filtered = dataTransaksi.filter(t => {
         const tDate = t.tanggal ? new Date(t.tanggal) : null;
-        const matchDate = !tDate || (tDate >= startDate && tDate <= endDate);
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        const matchDate = !tDate || (tDate >= start && tDate <= end);
         
         // Status mapping to match visual badges and DB values
         let matchStatus = false;
@@ -174,7 +178,11 @@ export default function LaporanSekolahScreen({ navigation }) {
 
   const filteredData = dataTransaksi.filter(t => {
     const tDate = t.tanggal ? new Date(t.tanggal) : null;
-    const matchDate = !tDate || (tDate >= startDate && tDate <= endDate);
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    const matchDate = !tDate || (tDate >= start && tDate <= end);
     
     // Status mapping to match visual badges and DB values
     let matchStatus = false;

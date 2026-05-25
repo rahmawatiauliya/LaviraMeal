@@ -44,6 +44,7 @@ import HomeScreenKantin from './src/screen/main/kantin/HomeScreenKantin';
 import ScannerKantinScreen from './src/screen/main/kantin/ScannerKantinScreen';
 import LaporanKantinScreen from './src/screen/main/kantin/LaporanKantinScreen';
 import FeedbackScreen from './src/screen/main/siswa/FeedbackScreen';
+import CanteenFeedbackScreen from './src/screen/main/shared/CanteenFeedbackScreen';
 import ManajemenPoinScreen from './src/screen/main/admin_sekolah/ManajemenPoinScreen';
 import PostMenuHarianScreen from './src/screen/main/kantin/PostMenuHarianScreen';
 import RiwayatMenuHarianScreen from './src/screen/main/shared/RiwayatMenuHarianScreen';
@@ -157,7 +158,7 @@ export default function App() {
           />
           <Stack.Screen
             name="AuditSekolahMenu"
-            component= {AuditSekolahMenuScreen}
+            component={AuditSekolahMenuScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -258,6 +259,11 @@ export default function App() {
           <Stack.Screen
             name="Feedback"
             component={FeedbackScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CanteenFeedback"
+            component={CanteenFeedbackScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen

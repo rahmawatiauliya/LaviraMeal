@@ -232,7 +232,7 @@ export default function ProfilScreen({ navigation }) {
               <Text style={styles.masterName}>{userData.nama}</Text>
               <View style={styles.roleBadge}>
                 <Text style={styles.roleBadgeTxt}>
-                  {userData.role === 'siswa' ? 'SISWA' : (userData.role === 'guru' ? 'GURU' : 'ADMIN SPPG PUSAT')}
+                  {userData.role === 'siswa' ? 'SISWA' : (userData.role === 'guru' ? 'GURU' : 'ADMIN PUSAT')}
                 </Text>
               </View>
             </View>

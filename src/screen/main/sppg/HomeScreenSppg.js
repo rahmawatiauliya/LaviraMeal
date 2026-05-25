@@ -43,11 +43,7 @@ export default function HomeScreenSppg({ navigation }) {
   const [sppgId, setSppgId] = useState(null);
   const [activeTransType, setActiveTransType] = useState(null); // 'kirim' or 'topup'
   const [transAmount, setTransAmount] = useState('');
-  const [transHistory, setTransHistory] = useState([
-    { ref: 'SMAN 1 Klari', type: 'Kirim', amount: 38000, date: '04 May, 22:07', status: 'Success' },
-    { ref: 'Kantin Barokah - SDN 01', type: 'Verifikasi', amount: 0, date: '05 May, 09.14', status: 'Baru' },
-    { ref: 'SDN 05 Karawang', type: 'Alert', amount: 0, date: 'Baru saja', status: 'Warning' },
-  ]);
+  const [transHistory, setTransHistory] = useState([]);
 
   const fadeAnim = useState(new Animated.Value(0))[0];
 
@@ -96,7 +92,15 @@ export default function HomeScreenSppg({ navigation }) {
       const response = await apiClient.get(`sppg/sppg_get_stats.php?sppg_id=${sppgId}`);
       if (response && response.data && response.data.status === 'success') {
         const newData = response.data.data || {};
-        setStats(prev => ({ ...prev, ...newData }));
+        setStats({
+          total_sekolah: newData.total_sekolah || 0,
+          total_verifikasi: newData.total_verifikasi || 0,
+          kantin_aktif: newData.kantin_aktif || 0,
+          point_bulan_ini: newData.point_bulan_ini || 0,
+          poin_distribusi: newData.poin_distribusi || 0,
+          notifikasi: newData.notifikasi || [],
+          grafik_konsumsi: newData.grafik_konsumsi || []
+        });
         setPendingKantinCount(newData.total_verifikasi || 0);
 
         if (newData.riwayat_transaksi) {

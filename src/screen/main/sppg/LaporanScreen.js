@@ -18,6 +18,15 @@ const GREEN_EXCEL = '#107C41';
 const TEXT_MAIN = '#1E293B';
 const TEXT_MUTED = '#64748B';
 
+const formatDateLocal = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function LaporanScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
@@ -50,8 +59,8 @@ export default function LaporanScreen({ navigation }) {
       const userData = JSON.parse(userDataStr);
       const sppgId = userData.sppg_id;
 
-      const startStr = startDate.toISOString().split('T')[0];
-      const endStr = endDate.toISOString().split('T')[0];
+      const startStr = formatDateLocal(startDate);
+      const endStr = formatDateLocal(endDate);
 
       const statsRes = await apiClient.get(`sppg/sppg_get_stats.php?sppg_id=${sppgId}&start_date=${startStr}&end_date=${endStr}`);
       if (statsRes.data.status === 'success') {

@@ -7,12 +7,12 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method == 'POST') {
     $data = json_decode(file_get_contents("php://input"));
 
-    $siswa_id = $data->siswa_id ?? '';
-    $kantin_qr = $data->kantin_qr ?? ''; // Contoh: "KANTI=N-1" atau "1"
+    $guru_id = $data->guru_id ?? '';
+    $kantin_qr = $data->kantin_qr ?? ''; 
 
-    if (empty($siswa_id) || empty($kantin_qr)) {
+    if (empty($guru_id) || empty($kantin_qr)) {
         http_response_code(400);
-        echo json_encode(["status" => "error", "message" => "Siswa ID dan Data Kantin wajib diisi."]);
+        echo json_encode(["status" => "error", "message" => "Guru ID dan Data Kantin wajib diisi."]);
         exit;
     }
 
@@ -20,7 +20,6 @@ if ($method == 'POST') {
         $db->beginTransaction();
 
         // 1. Ekstrak Kantin ID dari QR
-        // Asumsi QR berisi "KANTIN-{ID}" atau hanya "{ID}"
         $kantin_identifier = str_ireplace(['KANTIN-', 'K-'], '', $kantin_qr);
 
         // Cari Kantin berdasarkan ID atau user_id atau nama
@@ -34,21 +33,21 @@ if ($method == 'POST') {
         $kantin_id = $kantin['id'];
         $nama_kantin = $kantin['nama_kantin'];
 
-        // 2. Cek Data Siswa
-        $stmtSiswa = $db->prepare("SELECT id, saldo, nama, sekolah_id FROM siswa WHERE user_id = ? OR id = ? LIMIT 1");
-        $stmtSiswa->execute([$siswa_id, $siswa_id]);
-        $siswa = $stmtSiswa->fetch(PDO::FETCH_ASSOC);
+        // 2. Cek Data Guru
+        $stmtGuru = $db->prepare("SELECT id, saldo, nama, sekolah_id FROM guru WHERE user_id = ? OR id = ? LIMIT 1");
+        $stmtGuru->execute([$guru_id, $guru_id]);
+        $guru = $stmtGuru->fetch(PDO::FETCH_ASSOC);
 
-        if (!$siswa) {
-            throw new Exception("Data Siswa tidak valid.");
+        if (!$guru) {
+            throw new Exception("Data Guru tidak valid.");
         }
-        $real_siswa_id = $siswa['id'];
-        $saldo_siswa = (float) $siswa['saldo'];
+        $real_guru_id = $guru['id'];
+        $saldo_guru = (float) $guru['saldo'];
 
         // 3. Validasi Saldo
         $nominal_transaksi = 1; // 1 PTS per transaksi
-        if ($saldo_siswa < $nominal_transaksi) {
-            throw new Exception("Poin tidak mencukupi. (Saldo: $saldo_siswa PTS, Butuh: $nominal_transaksi PTS)");
+        if ($saldo_guru < $nominal_transaksi) {
+            throw new Exception("Poin tidak mencukupi. (Saldo: $saldo_guru PTS, Butuh: $nominal_transaksi PTS)");
         }
 
         // 4. Ambil Menu Terkini Kantin
@@ -57,9 +56,9 @@ if ($method == 'POST') {
         $menu_makanan = $stmtMenu->fetch(PDO::FETCH_ASSOC);
         $nama_menu = $menu_makanan ? $menu_makanan['nama_menu'] : 'Paket Makan LaviraMeal';
 
-        // 5. Potong Saldo Siswa
-        $stmtPotong = $db->prepare("UPDATE siswa SET saldo = saldo - ? WHERE id = ?");
-        $stmtPotong->execute([$nominal_transaksi, $real_siswa_id]);
+        // 5. Potong Saldo Guru
+        $stmtPotong = $db->prepare("UPDATE guru SET saldo = saldo - ? WHERE id = ?");
+        $stmtPotong->execute([$nominal_transaksi, $real_guru_id]);
 
         // 6. Tambah Saldo Kantin
         try {
@@ -73,10 +72,10 @@ if ($method == 'POST') {
         // 7. Catat Riwayat
         $message = "Makan di Kantin $nama_kantin ($nama_menu)";
         $stmtTrans = $db->prepare("
-            INSERT INTO transaksi_siswa (siswa_id, kantin_id, type, category, nominal, message) 
+            INSERT INTO transaksi_guru (guru_id, kantin_id, type, category, nominal, message) 
             VALUES (?, ?, 'keluar', 'Makan', ?, ?)
         ");
-        $stmtTrans->execute([$real_siswa_id, $kantin_id, $nominal_transaksi, $message]);
+        $stmtTrans->execute([$real_guru_id, $kantin_id, $nominal_transaksi, $message]);
 
         $db->commit();
 

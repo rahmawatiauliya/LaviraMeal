@@ -30,16 +30,23 @@ try {
 
     // 3. Ambil Riwayat Terakhir (UNION antara Transaksi Finansial & Pengambilan Makan)
     $stmtHistory = $db->prepare("
-        (SELECT created_at, message, nominal as amount, type 
-         FROM transaksi_siswa 
-         WHERE siswa_id = ?)
+        (SELECT t.id, t.kantin_id, k.nama_kantin, t.created_at, t.message, t.nominal as amount, t.type,
+                (CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END) as already_reviewed
+         FROM transaksi_siswa t
+         LEFT JOIN kantin k ON t.kantin_id = k.id
+         LEFT JOIN feedback_kantin f ON t.id = f.transaksi_id AND f.siswa_id = :user_id1
+         WHERE t.siswa_id = :siswa_id)
         UNION ALL
-        (SELECT tanggal as created_at, 'Pengambilan Makan Bergizi' as message, 0 as amount, 'keluar' as type 
+        (SELECT NULL as id, NULL as kantin_id, NULL as nama_kantin, tanggal as created_at, 'Pengambilan Makan Bergizi' as message, 0 as amount, 'keluar' as type, 1 as already_reviewed
          FROM siswa_pengambilan_mbg 
-         WHERE siswa_id = ?)
+         WHERE siswa_id = :siswa_id2)
         ORDER BY created_at DESC LIMIT 20
     ");
-    $stmtHistory->execute([$siswa_internal_id, $siswa_internal_id]);
+    $stmtHistory->execute([
+        ':user_id1' => $user_id,
+        ':siswa_id' => $siswa_internal_id,
+        ':siswa_id2' => $siswa_internal_id
+    ]);
     $riwayat = $stmtHistory->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([

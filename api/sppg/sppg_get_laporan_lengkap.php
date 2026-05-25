@@ -1,3 +1,5 @@
+
+
 <?php
 include_once __DIR__ . '/../shared/config.php';
 
@@ -18,15 +20,6 @@ try {
     if ($sman) {
         $sman_id = $sman['id'];
         
-        // 2. Buat/pastikan transaksi SMAN 1 Klari sukses senilai 960 PTS bertanggal 17 Mei 2026
-        $stmt_check = $db->prepare("SELECT COUNT(*) FROM transaksi_dana WHERE id = 'TRX-2026051710001'");
-        $stmt_check->execute();
-        if ($stmt_check->fetchColumn() == 0) {
-            $db->prepare("
-                INSERT INTO transaksi_dana (id, sppg_id, sekolah_id, nominal, metode, status, tanggal)
-                VALUES ('TRX-2026051710001', ?, ?, 960, 'Transfer', 'Berhasil', '2026-05-17 15:16:00')
-            ")->execute([$sppg_id, $sman_id]);
-        }
     }
     
     // Koreksi semua status transfer menjadi 'Berhasil'

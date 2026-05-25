@@ -55,6 +55,7 @@ export default function HomeScreenSekolah({ navigation }) {
   const [kantinModalVisible, setKantinModalVisible] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+  const [deletingKantinId, setDeletingKantinId] = useState(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
 
   const getCalendarDays = () => {
@@ -132,6 +133,41 @@ export default function HomeScreenSekolah({ navigation }) {
   const onRefresh = () => {
     setRefreshing(true);
     fetchStats(selectedKelas, selectedTanggal).then(() => setRefreshing(false));
+  };
+
+  const handleDeleteKantin = (kantin) => {
+    Alert.alert(
+      'Hapus Kantin',
+      `Apakah Anda yakin ingin menghapus "${kantin.nama_kantin}" dari daftar sekolah? Tindakan ini tidak dapat dibatalkan.`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeletingKantinId(kantin.id);
+              const storedUser = await AsyncStorage.getItem('user_data');
+              const parsedUser = JSON.parse(storedUser);
+              const response = await apiClient.post('sekolah/sekolah_delete_kantin.php', {
+                kantin_id: kantin.id,
+                sekolah_id: parsedUser.sekolah_id,
+              });
+              if (response.data && response.data.status === 'success') {
+                Alert.alert('Berhasil', response.data.message);
+                fetchStats(selectedKelas, selectedTanggal);
+              } else {
+                Alert.alert('Gagal', response.data.message || 'Terjadi kesalahan.');
+              }
+            } catch (err) {
+              Alert.alert('Error', 'Gagal menghapus kantin.');
+            } finally {
+              setDeletingKantinId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const formatPTS = (val) => `${parseInt(val || 0).toLocaleString('id-ID')} PTS`;
@@ -411,11 +447,21 @@ export default function HomeScreenSekolah({ navigation }) {
                         <Text style={{ fontSize: 15, fontWeight: 'bold', color: BLUE_DARK }}>{k.nama_kantin}</Text>
                         <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2, fontWeight: '600' }}>PIC: {k.penanggung_jawab}</Text>
                       </View>
-                      <View style={{ alignItems: 'flex-end' }}>
+                      <View style={{ alignItems: 'flex-end', gap: 6 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: k.is_aktif ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
                           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: k.is_aktif ? SUCCESS : DANGER }} />
                           <Text style={{ fontSize: 10, fontWeight: 'bold', color: k.is_aktif ? SUCCESS : DANGER }}>{k.is_aktif ? 'Aktif' : 'Non-Aktif'}</Text>
                         </View>
+                        <TouchableOpacity
+                          onPress={() => handleDeleteKantin(k)}
+                          disabled={deletingKantinId === k.id}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEE2E2', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}
+                        >
+                          {deletingKantinId === k.id
+                            ? <ActivityIndicator size={10} color={DANGER} />
+                            : <Ionicons name="trash-outline" size={12} color={DANGER} />}
+                          <Text style={{ fontSize: 10, fontWeight: 'bold', color: DANGER }}>Hapus</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   ))}
@@ -464,7 +510,14 @@ export default function HomeScreenSekolah({ navigation }) {
             <View style={styles.calendarGrid}>
               {getCalendarDays().map((item, idx) => {
                 const isSelected = item.dateStr === selectedTanggal;
-                const isToday = item.dateStr === new Date().toISOString().split('T')[0];
+                const localToday = (() => {
+                  const d = new Date();
+                  const year = d.getFullYear();
+                  const month = String(d.getMonth() + 1).padStart(2, '0');
+                  const day = String(d.getDate()).padStart(2, '0');
+                  return `${year}-${month}-${day}`;
+                })();
+                const isToday = item.dateStr === localToday;
                 return (
                   <View key={idx} style={styles.dayGridCell}>
                     {item.day ? (

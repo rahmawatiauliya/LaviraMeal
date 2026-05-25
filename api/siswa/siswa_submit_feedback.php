@@ -5,12 +5,27 @@ include_once __DIR__ . '/../shared/config.php';
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method == 'POST') {
-    $rating = isset($_POST['rating']) ? (int)$_POST['rating'] : 5;
+    // Logging request payload for debugging
+    $log_dir = __DIR__ . '/../../scratch';
+    if (!file_exists($log_dir)) {
+        mkdir($log_dir, 0777, true);
+    }
+    $log_data = "--- " . date('Y-m-d H:i:s') . " ---\n";
+    $log_data .= "POST Params: " . print_r($_POST, true) . "\n";
+    $log_data .= "FILES Params: " . print_r($_FILES, true) . "\n";
+    $log_data .= "Headers: " . print_r(getallheaders(), true) . "\n\n";
+    file_put_contents($log_dir . '/feedback_debug.log', $log_data, FILE_APPEND);
+
+    $rating = isset($_POST['rating']) ? (int) $_POST['rating'] : 5;
     $review = isset($_POST['review']) ? $_POST['review'] : '';
     $kantin_id = isset($_POST['kantin_id']) ? $_POST['kantin_id'] : '';
     $siswa_id = isset($_POST['siswa_id']) ? $_POST['siswa_id'] : '';
 
+    $transaksi_id = isset($_POST['transaksi_id']) ? $_POST['transaksi_id'] : null;
+
     if (empty($kantin_id)) {
+        // Log bad request specifically
+        file_put_contents($log_dir . '/feedback_debug.log', "ERROR: kantin_id is empty!\n\n", FILE_APPEND);
         http_response_code(400);
         echo json_encode(["status" => "error", "message" => "ID Kantin wajib diisi."]);
         exit;
@@ -21,7 +36,7 @@ if ($method == 'POST') {
         $stmtKantin = $db->prepare("SELECT sekolah_id FROM kantin WHERE id = ?");
         $stmtKantin->execute([$kantin_id]);
         $kantin = $stmtKantin->fetch(PDO::FETCH_ASSOC);
-        
+
         if (!$kantin) {
             // Coba ambil dari users table (jika ID kantin adalah user_id)
             $stmtKUser = $db->prepare("SELECT sekolah_id FROM users WHERE id = ?");
@@ -44,7 +59,8 @@ if ($method == 'POST') {
                 $stmtUser = $db->prepare("SELECT nama FROM users WHERE id = ? LIMIT 1");
                 $stmtUser->execute([$siswa_id]);
                 $userRow = $stmtUser->fetch(PDO::FETCH_ASSOC);
-                if ($userRow) $nama_siswa = $userRow['nama'];
+                if ($userRow)
+                    $nama_siswa = $userRow['nama'];
             }
         }
 
@@ -73,7 +89,7 @@ if ($method == 'POST') {
         if (empty($jadwal_id)) {
             // Jika benar-benar kosong, buat jadwal distribusi dummy hari ini agar constraint FK terpenuhi
             $jadwal_id = uniqid();
-            
+
             // Ambil sppg_id jika ada
             $stmtSppg = $db->query("SELECT id FROM sppg LIMIT 1");
             $sppg = $stmtSppg->fetch(PDO::FETCH_ASSOC);
@@ -81,7 +97,7 @@ if ($method == 'POST') {
 
             // Insert dummy SPPG if not exist to satisfy FK
             if (!$sppg) {
-                $stmtInsSppg = $db->prepare("INSERT INTO sppg (id, nama_lembaga, user_id) VALUES (?, 'SPPG Pusat', ?)");
+                $stmtInsSppg = $db->prepare("INSERT INTO sppg (id, nama_lembaga, user_id, kode_sppg) VALUES (?, 'SPPG Pusat', ?, 'SPPG_DUMMY')");
                 $stmtInsSppg->execute([$sppg_id, uniqid()]);
             }
 
@@ -103,6 +119,11 @@ if ($method == 'POST') {
         } catch (Exception $e) {
             $db->exec("ALTER TABLE feedback_kantin ADD COLUMN siswa_id CHAR(36) DEFAULT NULL");
         }
+        try {
+            $db->query("SELECT transaksi_id FROM feedback_kantin LIMIT 1");
+        } catch (Exception $e) {
+            $db->exec("ALTER TABLE feedback_kantin ADD COLUMN transaksi_id VARCHAR(50) DEFAULT NULL");
+        }
 
         // 5. Tangani Upload Foto
         $photo_filename = null;
@@ -111,21 +132,22 @@ if ($method == 'POST') {
             if (!file_exists($target_dir)) {
                 mkdir($target_dir, 0777, true);
             }
-            
+
             $file_extension = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
-            if (empty($file_extension)) $file_extension = 'jpg';
-            
+            if (empty($file_extension))
+                $file_extension = 'jpg';
+
             $photo_filename = 'feedback_' . uniqid() . '.' . $file_extension;
             $target_file = $target_dir . $photo_filename;
-            
+
             move_uploaded_file($_FILES['photo']['tmp_name'], $target_file);
         }
 
         // 6. Simpan feedback ke database
         $feedback_id = uniqid();
         $stmtInsert = $db->prepare("
-            INSERT INTO feedback_kantin (id, sekolah_id, kantin_id, jadwal_id, rating, komentar, petugas_penerima, photo, siswa_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO feedback_kantin (id, sekolah_id, kantin_id, jadwal_id, rating, komentar, petugas_penerima, photo, siswa_id, transaksi_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmtInsert->execute([
             $feedback_id,
@@ -136,7 +158,8 @@ if ($method == 'POST') {
             $review,
             $nama_siswa, // Simpan nama pengirim di petugas_penerima
             $photo_filename,
-            $siswa_id
+            $siswa_id,
+            $transaksi_id
         ]);
 
         echo json_encode([

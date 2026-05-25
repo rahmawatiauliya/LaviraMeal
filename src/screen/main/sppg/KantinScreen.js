@@ -35,6 +35,7 @@ export default function KantinScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [quickActionModal, setQuickActionModal] = useState(false);
 
+
   // Dashboard detail states
   const [canteenDetailModal, setCanteenDetailModal] = useState(false);
   const [canteenDetailLoading, setCanteenDetailLoading] = useState(false);
@@ -56,13 +57,7 @@ export default function KantinScreen({ navigation }) {
       if (resSchools.data && resSchools.data.status === 'success') {
         setSchools(resSchools.data.data || []);
       } else {
-        // Fallback realistic labels
-        setSchools([
-          { id: 1, nama_sekolah: 'SDN Duren 1', npsn: '20231201' },
-          { id: 2, nama_sekolah: 'SMAN 1 Klari', npsn: '20244502' },
-          { id: 3, nama_sekolah: 'SMPN 2 Klari', npsn: '20255013' },
-          { id: 4, nama_sekolah: 'SDN Klari 3', npsn: '20266024' }
-        ]);
+        setSchools([]);
       }
 
       // 2. Get Canteens
@@ -70,32 +65,7 @@ export default function KantinScreen({ navigation }) {
       if (resCanteens.data && resCanteens.data.status === 'success') {
         setCanteens(resCanteens.data.data || []);
       } else {
-        setCanteens([
-          {
-            id: 101,
-            nama_kantin: 'Kantin Sehat 1',
-            pengelola: 'Ibu Hajah Sumiyati',
-            sekolah: 'SDN Duren 1',
-            status: 'Menunggu Verifikasi',
-            desc: 'Kantin higienis dengan spesialisasi menu sayur segar dan protein rendah lemak.',
-            verified_by_school: true,
-            verified_by_sppg: false,
-            foto_kantin: 'https://images.unsplash.com/photo-1567521464027-f127ff144326?q=80&w=400',
-            foto_makanan: 'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?q=80&w=400'
-          },
-          {
-            id: 102,
-            nama_kantin: 'Dapur Juara MBG',
-            pengelola: 'Bapak Rudi Hartono',
-            sekolah: 'SMAN 1 Klari',
-            status: 'Menunggu Verifikasi',
-            desc: 'Unit usaha boga desa Klari dengan sertifikat sanitasi dari Dinkes Karawang.',
-            verified_by_school: false,
-            verified_by_sppg: false,
-            foto_kantin: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=400',
-            foto_makanan: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?q=80&w=400'
-          }
-        ]);
+        setCanteens([]);
       }
     } catch (error) {
       console.error(error);
@@ -373,13 +343,13 @@ export default function KantinScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: SOFT_BG },
-  header: { height: 240, borderBottomLeftRadius: 50, borderBottomRightRadius: 50, overflow: 'hidden', elevation: 20 },
+  header: { height: 130, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, overflow: 'hidden', elevation: 20 },
   headerBg: { flex: 1, backgroundColor: BLUE_PRIMARY, paddingHorizontal: 25 },
   batikImage: { opacity: 0.3, resizeMode: 'cover', tintColor: 'rgba(255,255,255,0.3)' },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 45 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 25 },
   backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   headerTitle: { color: WHITE, fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
-  headerDesc: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 15, fontWeight: 'bold', lineHeight: 20 },
+  headerDesc: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4, fontWeight: 'bold', lineHeight: 20 },
   hSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 'bold' },
   content: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -400,6 +370,8 @@ const styles = StyleSheet.create({
   miniBadgeTxt: { fontSize: 9, fontWeight: 'bold' },
   empty: { alignItems: 'center', marginTop: 80 },
   emptyTxt: { marginTop: 15, fontSize: 14, color: '#94a3b8', textAlign: 'center' },
+  resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#fee2e2', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 12 },
+  resetBtnTxt: { fontSize: 12, fontWeight: 'bold', color: '#ef4444' },
   overlay: { flex: 1, backgroundColor: 'rgba(11,30,63,0.8)', justifyContent: 'flex-end' },
   actionSheet: { backgroundColor: WHITE, borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 35 },
   sheetTitle: { fontSize: 20, fontWeight: '900', color: BLUE_PRIMARY, textAlign: 'center', marginBottom: 30 },

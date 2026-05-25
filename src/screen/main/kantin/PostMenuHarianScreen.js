@@ -109,7 +109,14 @@ export default function PostMenuHarianScreen({ navigation }) {
       formData.append('kantin_id', kantinData.id);
       formData.append('nama_menu', namaMenu);
       formData.append('deskripsi', deskripsi);
-      formData.append('tanggal', new Date().toISOString().split('T')[0]);
+      const localDate = (() => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      })();
+      formData.append('tanggal', localDate);
 
       if (image) {
         const localUri = image.uri;
@@ -128,7 +135,9 @@ export default function PostMenuHarianScreen({ navigation }) {
       }
 
       const response = await apiClient.post('kantin/post_menu_harian.php', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       if (response.data.status === 'success') {

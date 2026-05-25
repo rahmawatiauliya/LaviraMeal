@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import apiClient from '../../../api/client';
+import apiClient, { IMAGE_BASE_URL } from '../../../api/client';
 
 const BLUE_PRIMARY = '#1C2C5B';
 const WHITE = '#FFFFFF';
@@ -161,13 +161,13 @@ export default function PersetujuanRegistrasiScreen({ navigation }) {
                 <View style={styles.detailBox}>
                   <Text style={styles.detailText}><Text style={styles.bold}>Nama Kantin:</Text> {selectedUser.nama_kantin}</Text>
                   <Text style={styles.detailText}><Text style={styles.bold}>NPSN Sekolah:</Text> {selectedUser.npsn_sekolah}</Text>
-                  <Text style={styles.detailText}><Text style={styles.bold}>Status Sekolah:</Text> {selectedUser.status_sekolah.toUpperCase()}</Text>
+                  <Text style={styles.detailText}><Text style={styles.bold}>Status Sekolah:</Text> {selectedUser.status_sekolah?.toUpperCase() || '-'}</Text>
                 </View>
 
                 <Text style={styles.sectionLabel}>Foto Kantin</Text>
                 {selectedUser.foto_kantin ? (
                   <Image 
-                    source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedUser.foto_kantin}` }} 
+                    source={{ uri: `${IMAGE_BASE_URL}${selectedUser.foto_kantin}` }} 
                     style={styles.previewImg} 
                     resizeMode="cover"
                   />
@@ -178,7 +178,7 @@ export default function PersetujuanRegistrasiScreen({ navigation }) {
                 <Text style={styles.sectionLabel}>Foto Menu</Text>
                 {selectedUser.foto_menu ? (
                   <Image 
-                    source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedUser.foto_menu}` }} 
+                    source={{ uri: `${IMAGE_BASE_URL}${selectedUser.foto_menu}` }} 
                     style={styles.previewImg} 
                     resizeMode="cover"
                   />

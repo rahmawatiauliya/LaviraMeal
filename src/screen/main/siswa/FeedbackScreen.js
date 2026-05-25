@@ -42,21 +42,70 @@ export default function FeedbackScreen({ route, navigation }) {
   }, []);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    Alert.alert(
+      'Unggah Foto Makanan',
+      'Pilih metode untuk mengunggah foto bukti makanan Anda:',
+      [
+        {
+          text: 'Ambil Foto Baru (Kamera)',
+          onPress: handleLaunchCamera,
+        },
+        {
+          text: 'Pilih dari Galeri',
+          onPress: handleLaunchLibrary,
+        },
+        {
+          text: 'Batal',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
+  const handleLaunchCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Izin Ditolak', 'Maaf, kami butuh izin galeri untuk mengunggah foto makanan.');
+      Alert.alert('Izin Ditolak', 'Maaf, kami butuh izin kamera untuk mengambil foto makanan secara langsung.');
       return;
     }
 
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.3,
-    });
+    try {
+      let result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.3,
+      });
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      if (!result.canceled) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (e) {
+      console.log(e);
+      Alert.alert('Error', 'Gagal membuka kamera perangkat Anda.');
+    }
+  };
+
+  const handleLaunchLibrary = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Izin Ditolak', 'Maaf, kami butuh izin galeri untuk memilih foto makanan.');
+      return;
+    }
+
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.3,
+      });
+
+      if (!result.canceled) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (e) {
+      console.log(e);
+      Alert.alert('Error', 'Gagal membuka galeri foto perangkat Anda.');
     }
   };
 
@@ -103,7 +152,9 @@ export default function FeedbackScreen({ route, navigation }) {
       }
       
       await apiClient.post('siswa/siswa_submit_feedback.php', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       Alert.alert(

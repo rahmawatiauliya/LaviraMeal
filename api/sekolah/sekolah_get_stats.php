@@ -64,7 +64,7 @@ try {
         $kantin_aktif = (int)$stmtKantin->fetch(PDO::FETCH_ASSOC)['total'];
         
         // List detail kantin
-        $stmtKantinList = $db->prepare("SELECT id, nama_kantin, penanggung_jawab, is_aktif FROM kantin WHERE sekolah_id = :id ORDER BY is_aktif DESC");
+        $stmtKantinList = $db->prepare("SELECT id, nama_kantin, pemilik AS penanggung_jawab, is_aktif FROM kantin WHERE sekolah_id = :id ORDER BY is_aktif DESC");
         $stmtKantinList->execute([':id' => $sekolah_id]);
         $kantin_list = $stmtKantinList->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {}

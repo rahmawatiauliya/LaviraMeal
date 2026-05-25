@@ -19,18 +19,6 @@ if (!empty($sppg_id)) {
             $sman_id_actual = $sman['id'];
         }
         
-        // 2. Buat/pastikan transaksi SMAN 1 Klari sukses senilai 960 PTS bertanggal 17 Mei 2026
-        $stmt_check = $db->prepare("SELECT COUNT(*) FROM transaksi_dana WHERE id = 'TRX-2026051710001'");
-        $stmt_check->execute();
-        if ($stmt_check->fetchColumn() == 0) {
-            $db->prepare("
-                INSERT INTO transaksi_dana (id, sppg_id, sekolah_id, nominal, metode, status, tanggal)
-                VALUES ('TRX-2026051710001', ?, ?, 960, 'Transfer', 'Berhasil', '2026-05-17 15:16:00')
-            ")->execute([$sppg_id, $sman_id_actual]);
-        }
-        
-        // Koreksi semua status transfer menjadi 'Berhasil'
-        $db->exec("UPDATE transaksi_dana SET status = 'Berhasil'");
 
         $start_date_filter = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
         $end_date_filter = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');

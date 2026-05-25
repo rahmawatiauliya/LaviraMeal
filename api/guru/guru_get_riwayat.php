@@ -16,8 +16,8 @@ try {
     } catch (Exception $e) {
         $db->exec("CREATE TABLE transaksi_guru (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            guru_id INT NOT NULL,
-            kantin_id INT DEFAULT NULL,
+            guru_id VARCHAR(50) NOT NULL,
+            kantin_id VARCHAR(50) DEFAULT NULL,
             type ENUM('masuk', 'keluar') NOT NULL,
             category VARCHAR(50) NOT NULL,
             nominal DECIMAL(15,2) NOT NULL DEFAULT 0,
@@ -44,17 +44,22 @@ try {
     }
 
     $guru_id = $guru['id'];
-    $saldo = (float)$guru['saldo'];
+    $saldo = (float) $guru['saldo'];
 
     // 2. Dapatkan riwayat transaksi
     $stmtTrans = $db->prepare("
-        SELECT t.*, k.nama_kantin 
+        SELECT t.*, k.nama_kantin,
+               (CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END) as already_reviewed
         FROM transaksi_guru t 
         LEFT JOIN kantin k ON t.kantin_id = k.id 
-        WHERE t.guru_id = ? 
+        LEFT JOIN feedback_kantin f ON t.id = f.transaksi_id AND f.siswa_id = :user_id
+        WHERE t.guru_id = :guru_id 
         ORDER BY t.created_at DESC
     ");
-    $stmtTrans->execute([$guru_id]);
+    $stmtTrans->execute([
+        ':user_id' => $user_id,
+        ':guru_id' => $guru_id
+    ]);
     $history = $stmtTrans->fetchAll(PDO::FETCH_ASSOC);
 
     // 3. BACKFILL LOGIC: Jika belum ada log riwayat sama sekali tetapi saldo > 0 (seperti transfer tanggal 17 Mei)
@@ -65,7 +70,7 @@ try {
             VALUES (?, 'masuk', 'Transfer', ?, 'Penerimaan Poin dari Sekolah', '2026-05-17 10:00:00')
         ");
         $stmt_backfill->execute([$guru_id, $saldo]);
-        
+
         // Ambil ulang riwayat terbaru
         $stmtTrans->execute([$guru_id]);
         $history = $stmtTrans->fetchAll(PDO::FETCH_ASSOC);

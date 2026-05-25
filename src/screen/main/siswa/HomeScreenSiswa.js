@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
-import apiClient from '../../../api/client';
+import apiClient, { IMAGE_BASE_URL } from '../../../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BLUE_PRIMARY = '#0B1E3F';
@@ -37,13 +37,29 @@ export default function HomeScreenSiswa({ navigation }) {
     riwayat: [],
     qr_code_token: ''
   });
+  const [canteens, setCanteens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
+  const fetchCanteens = async (userId) => {
+    const idToUse = userId || userData?.id;
+    if (!idToUse) return;
+    try {
+      const response = await apiClient.get(`shared/get_active_canteens.php?user_id=${idToUse}`);
+      if (response.data && response.data.status === 'success') {
+        setCanteens(response.data.canteens || []);
+      }
+    } catch (error) {
+      console.error("Canteen fetch error:", error);
+    }
+  };
 
   useEffect(() => {
     loadUserData();
-    
+
     // Real-time polling every 10 seconds
     const interval = setInterval(() => {
       if (userData?.id) {
@@ -59,6 +75,7 @@ export default function HomeScreenSiswa({ navigation }) {
     React.useCallback(() => {
       if (userData?.id) {
         fetchSiswaStats(userData.id);
+        fetchCanteens(userData.id);
       }
     }, [userData?.id])
   );
@@ -70,6 +87,7 @@ export default function HomeScreenSiswa({ navigation }) {
         const parsed = JSON.parse(dataStr);
         setUserData(parsed);
         fetchSiswaStats(parsed.id);
+        fetchCanteens(parsed.id);
       }
     } catch (e) {
       console.error(e);
@@ -108,7 +126,12 @@ export default function HomeScreenSiswa({ navigation }) {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadUserData().then(() => setRefreshing(false));
+    loadUserData().then(() => {
+      if (userData?.id) {
+        fetchCanteens(userData.id);
+      }
+      setRefreshing(false);
+    });
   };
 
   const handleLogout = () => {
@@ -117,8 +140,8 @@ export default function HomeScreenSiswa({ navigation }) {
       "Apakah Anda yakin ingin keluar?",
       [
         { text: "Batal", style: "cancel" },
-        { 
-          text: "Logout", 
+        {
+          text: "Logout",
           style: "destructive",
           onPress: async () => {
             await AsyncStorage.clear();
@@ -134,8 +157,8 @@ export default function HomeScreenSiswa({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
-      <ScrollView 
+
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BLUE_PRIMARY]} />}
       >
@@ -164,39 +187,86 @@ export default function HomeScreenSiswa({ navigation }) {
         </View>
 
         <View style={styles.contentBody}>
-            {/* WALLET CARD */}
-            <View style={styles.walletCard}>
-              <View style={styles.walletInfo}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.walletLabel}>Saldo Makan Aktif</Text>
-                  <Text style={styles.walletValue}>{Number(stats.saldo || 0).toLocaleString('id-ID')} PTS</Text>
-                  <Text style={styles.pointNoteMini}>*1 Point = Rp 15.000</Text>
-                </View>
-                <TouchableOpacity style={styles.miniQrContainer} onPress={() => setShowQRModal(true)}>
-                   <QRCode 
-                      value={stats?.qr_code_token || userData?.username || String(userData?.id || userData?.nama || 'LAVIRA-SISWA')} 
-                      size={60} 
-                      color={BLUE_PRIMARY} 
-                   />
-                   <Text style={styles.miniQrText}>TAP QR</Text>
-                </TouchableOpacity>
+          {/* WALLET CARD */}
+          <View style={styles.walletCard}>
+            <View style={styles.walletInfo}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.walletLabel}>Saldo Makan Aktif</Text>
+                <Text style={styles.walletValue}>{Number(stats.saldo || 0).toLocaleString('id-ID')} PTS</Text>
+                <Text style={styles.pointNoteMini}>*1 Point = Rp 15.000</Text>
               </View>
+              <TouchableOpacity style={styles.miniQrContainer} onPress={() => setShowQRModal(true)}>
+                <QRCode
+                  value={stats?.qr_code_token || userData?.username || String(userData?.id || userData?.nama || 'LAVIRA-SISWA')}
+                  size={60}
+                  color={BLUE_PRIMARY}
+                />
+                <Text style={styles.miniQrText}>TAP QR</Text>
+              </TouchableOpacity>
             </View>
+          </View>
 
           {/* QUICK ACTIONS */}
           <View style={styles.actionGrid}>
-             <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('QRScanner')}>
-                <View style={[styles.actionIcon, { backgroundColor: '#F0FDF4' }]}><Ionicons name="scan" size={22} color={SUCCESS} /></View>
-                <Text style={styles.actionLabel}>Scan QR</Text>
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.actionItem} onPress={() => setShowQRModal(true)}>
-                <View style={[styles.actionIcon, { backgroundColor: '#EFF6FF' }]}><Ionicons name="qr-code" size={22} color={ACCENT} /></View>
-                <Text style={styles.actionLabel}>QR Saya</Text>
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('RiwayatSiswa')}>
-                <View style={[styles.actionIcon, { backgroundColor: '#FDF2F8' }]}><Ionicons name="receipt" size={22} color="#D946EF" /></View>
-                <Text style={styles.actionLabel}>Riwayat</Text>
-             </TouchableOpacity>
+            <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('QRScanner')}>
+              <View style={[styles.actionIcon, { backgroundColor: '#F0FDF4' }]}><Ionicons name="scan" size={22} color={SUCCESS} /></View>
+              <Text style={styles.actionLabel}>Scan QR</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionItem} onPress={() => setShowQRModal(true)}>
+              <View style={[styles.actionIcon, { backgroundColor: '#EFF6FF' }]}><Ionicons name="qr-code" size={22} color={ACCENT} /></View>
+              <Text style={styles.actionLabel}>QR Saya</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('RiwayatSiswa')}>
+              <View style={[styles.actionIcon, { backgroundColor: '#FDF2F8' }]}><Ionicons name="receipt" size={22} color="#D946EF" /></View>
+              <Text style={styles.actionLabel}>Riwayat</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* MITRA KANTIN SECTION */}
+          <View style={{ marginBottom: 25, marginTop: 10 }}>
+            <Text style={styles.sectionTitle}>Mitra Kantin MBG</Text>
+            <Text style={styles.sectionSubtitle}>Ketuk kantin untuk melihat ulasan dan rating</Text>
+            
+            {canteens.length > 0 ? (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={{ gap: 15, paddingTop: 15, paddingBottom: 5 }}
+              >
+                {canteens.map((canteen) => (
+                  <TouchableOpacity 
+                    key={canteen.id} 
+                    style={styles.canteenCardItem}
+                    onPress={() => navigation.navigate('CanteenFeedback', {
+                      kantin_id: canteen.id,
+                      nama_kantin: canteen.nama_kantin,
+                      foto_kantin: canteen.foto_kantin
+                    })}
+                  >
+                    <Image 
+                      source={{ uri: canteen.foto_kantin ? `${IMAGE_BASE_URL}${canteen.foto_kantin}` : 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=300' }} 
+                      style={styles.canteenItemImg} 
+                    />
+                    <View style={styles.canteenItemInfo}>
+                      <Text style={styles.canteenItemName} numberOfLines={1}>{canteen.nama_kantin}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                        <Ionicons name="person" size={10} color="#94A3B8" />
+                        <Text style={styles.canteenItemOwner} numberOfLines={1}>{canteen.pemilik || 'Pemilik'}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                        <Ionicons name="call" size={10} color="#94A3B8" />
+                        <Text style={styles.canteenItemOwner} numberOfLines={1}>{canteen.no_telp || '-'}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.emptyCanteens}>
+                <Ionicons name="storefront-outline" size={32} color="#CBD5E1" />
+                <Text style={styles.emptyCanteensText}>Tidak ada mitra kantin aktif</Text>
+              </View>
+            )}
           </View>
 
           {/* RECENT ACTIVITY */}
@@ -208,19 +278,78 @@ export default function HomeScreenSiswa({ navigation }) {
           </View>
 
           {stats.riwayat.length > 0 ? stats.riwayat.slice(0, 2).map((item, idx) => (
-             <View key={idx} style={styles.activityCard}>
-                <View style={styles.activityIcon}><Ionicons name="fast-food-outline" size={20} color={BLUE_PRIMARY} /></View>
+            <TouchableOpacity
+              key={idx}
+              style={[styles.activityCard, { flexDirection: 'column', alignItems: 'stretch' }]}
+              onPress={() => {
+                setSelectedTransaction(item);
+                setShowDetailModal(true);
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={styles.activityIcon}>
+                  <Ionicons
+                    name={item.type === 'masuk' ? "arrow-down-circle" : "fast-food-outline"}
+                    size={20}
+                    color={item.type === 'masuk' ? SUCCESS : BLUE_PRIMARY}
+                  />
+                </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                   <Text style={styles.activityName}>{item.message}</Text>
-                   <Text style={styles.activityTime}>{item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '-'}</Text>
+                  <Text style={styles.activityName}>{item.message}</Text>
+                  <Text style={styles.activityTime}>{item.created_at ? new Date(item.created_at.replace(' ', 'T')).toLocaleString('id-ID') : '-'}</Text>
                 </View>
                 <Text style={[styles.activityAmount, { color: item.type === 'masuk' ? SUCCESS : '#EF4444' }]}>
                   {item.type === 'masuk' ? '+' : '-'}{item.amount} PTS
                 </Text>
-             </View>
+              </View>
+
+              {item.kantin_id && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="storefront-outline" size={14} color="#64748B" />
+                    <Text style={{ fontSize: 12, color: '#64748B', fontWeight: 'bold' }}>{item.nama_kantin || 'Kantin'}</Text>
+                  </View>
+                  {item.already_reviewed === 1 ? (
+                    <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+                      <Text style={{ fontSize: 10, color: '#10B981', fontWeight: 'bold' }}>Sudah Diulas</Text>
+                    </View>
+                  ) : (
+                    (() => {
+                      const txDate = item.created_at ? new Date(item.created_at.replace(' ', 'T')) : new Date();
+                      const diffTime = Math.abs(new Date() - txDate);
+                      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+                      if (diffDays <= 2) {
+                        return (
+                          <TouchableOpacity 
+                            style={{ backgroundColor: '#F59E0B', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                            onPress={() => navigation.navigate('Feedback', {
+                              canteenData: {
+                                id: item.kantin_id,
+                                name: item.nama_kantin || 'Kantin',
+                                transaksi_id: item.id
+                              }
+                            })}
+                          >
+                            <Ionicons name="star" size={12} color="#FFFFFF" />
+                            <Text style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 'bold' }}>Beri Ulasan</Text>
+                          </TouchableOpacity>
+                        );
+                      } else {
+                        return (
+                          <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                            <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: 'bold' }}>Batas Ulasan Habis</Text>
+                          </View>
+                        );
+                      }
+                    })()
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
           )) : (
             <View style={styles.emptyActivity}>
-               <Text style={styles.emptyText}>Belum ada pengambilan makanan</Text>
+              <Text style={styles.emptyText}>Belum ada pengambilan makanan</Text>
             </View>
           )}
         </View>
@@ -231,20 +360,20 @@ export default function HomeScreenSiswa({ navigation }) {
 
       {/* BOTTOM NAV */}
       <View style={styles.bottomNav}>
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('HomeSiswa')}>
-           <Ionicons name="grid" size={24} color={BLUE_PRIMARY} />
-           <Text style={[styles.navLabel, {color: BLUE_PRIMARY}]}>Home</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('HomeSiswa')}>
+          <Ionicons name="grid" size={24} color={BLUE_PRIMARY} />
+          <Text style={[styles.navLabel, { color: BLUE_PRIMARY }]}>Home</Text>
+        </TouchableOpacity>
 
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('RiwayatSiswa')}>
-           <Ionicons name="receipt-outline" size={24} color="#94A3B8" />
-           <Text style={styles.navLabel}>Riwayat</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('RiwayatSiswa')}>
+          <Ionicons name="receipt-outline" size={24} color="#94A3B8" />
+          <Text style={styles.navLabel}>Riwayat</Text>
+        </TouchableOpacity>
 
-         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('ProfilSiswa')}>
-           <Ionicons name="person-outline" size={24} color="#94A3B8" />
-           <Text style={styles.navLabel}>Profil</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('ProfilSiswa')}>
+          <Ionicons name="person-outline" size={24} color="#94A3B8" />
+          <Text style={styles.navLabel}>Profil</Text>
+        </TouchableOpacity>
       </View>
 
       {/* QR MODAL */}
@@ -260,13 +389,13 @@ export default function HomeScreenSiswa({ navigation }) {
 
             <View style={styles.qrModalContent}>
               <Text style={styles.qrNote}>Tunjukkan QR ini ke petugas kantin atau sekolah untuk verifikasi.</Text>
-              
+
               <View style={styles.qrWrapperModal}>
                 <View style={styles.qrBgModal}>
-                  <QRCode 
-                    value={stats?.qr_code_token || userData?.username || String(userData?.id || userData?.nama || 'LAVIRA-SISWA')} 
-                    size={200} 
-                    color={BLUE_PRIMARY} 
+                  <QRCode
+                    value={stats?.qr_code_token || userData?.username || String(userData?.id || userData?.nama || 'LAVIRA-SISWA')}
+                    size={200}
+                    color={BLUE_PRIMARY}
                   />
                 </View>
               </View>
@@ -280,6 +409,134 @@ export default function HomeScreenSiswa({ navigation }) {
                 <Text style={styles.closeBtnText}>Tutup</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* DETAIL TRANSAKSI MODAL */}
+      <Modal visible={showDetailModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { paddingVertical: 30 }]}>
+            <View style={styles.modalCloseRow}>
+              <Text style={styles.modalHeaderTitle}>Detail Transaksi</Text>
+              <TouchableOpacity onPress={() => setShowDetailModal(false)}>
+                <Feather name="x" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ alignItems: 'center', marginBottom: 25 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: selectedTransaction?.type === 'masuk' ? '#F0FDF4' : '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+                <Ionicons
+                  name={selectedTransaction?.type === 'masuk' ? "arrow-down" : "restaurant"}
+                  size={32}
+                  color={selectedTransaction?.type === 'masuk' ? SUCCESS : '#EF4444'}
+                />
+              </View>
+              <Text style={{ fontSize: 13, color: '#64748B', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {selectedTransaction?.type === 'masuk' ? 'Transfer Masuk' : 'Transaksi Keluar'}
+              </Text>
+              <Text style={{ fontSize: 32, fontWeight: '900', color: BLUE_PRIMARY, marginTop: 8 }}>
+                {selectedTransaction?.type === 'masuk' ? '+' : '-'}{selectedTransaction?.amount} PTS
+              </Text>
+              <Text style={{ fontSize: 14, color: GOLD, fontWeight: '700', marginTop: 4 }}>
+                Setara Rp {Number(selectedTransaction?.amount * 15000).toLocaleString('id-ID')}
+              </Text>
+            </View>
+
+            {/* Receipt Details Box */}
+            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 20, padding: 18, marginBottom: 25, borderWidth: 1, borderColor: '#F1F5F9' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>STATUS</Text>
+                <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                  <Text style={{ fontSize: 10, color: SUCCESS, fontWeight: '800' }}>BERHASIL</Text>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>PENGIRIM</Text>
+                <Text style={{ fontSize: 12, color: BLUE_DARK, fontWeight: '700' }}>
+                  {selectedTransaction?.type === 'masuk' ? 'Admin Sekolah (LaviraMeal)' : 'Petugas Kantin'}
+                </Text>
+              </View>
+
+              {selectedTransaction?.type === 'keluar' && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>KANTIN</Text>
+                  <Text style={{ fontSize: 12, color: BLUE_DARK, fontWeight: '700' }}>
+                    {selectedTransaction?.nama_kantin || 'Kantin Sekolah'}
+                  </Text>
+                </View>
+              )}
+
+              {selectedTransaction?.type === 'keluar' && selectedTransaction?.kantin_id && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>STATUS ULASAN</Text>
+                  {selectedTransaction?.already_reviewed === 1 ? (
+                    <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+                      <Text style={{ fontSize: 10, color: '#10B981', fontWeight: 'bold' }}>Sudah Diulas</Text>
+                    </View>
+                  ) : (
+                    (() => {
+                      const txDate = selectedTransaction?.created_at ? new Date(selectedTransaction.created_at.replace(' ', 'T')) : new Date();
+                      const diffTime = Math.abs(new Date() - txDate);
+                      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+                      if (diffDays <= 2) {
+                        return (
+                          <TouchableOpacity 
+                            style={{ backgroundColor: '#F59E0B', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                            onPress={() => {
+                              setShowDetailModal(false);
+                              navigation.navigate('Feedback', {
+                                canteenData: {
+                                  id: selectedTransaction.kantin_id,
+                                  name: selectedTransaction.nama_kantin || 'Kantin',
+                                  transaksi_id: selectedTransaction.id
+                                }
+                              });
+                            }}
+                          >
+                            <Ionicons name="star" size={12} color="#FFFFFF" />
+                            <Text style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 'bold' }}>Beri Ulasan</Text>
+                          </TouchableOpacity>
+                        );
+                      } else {
+                        return (
+                          <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                            <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: 'bold' }}>Batas Ulasan Habis</Text>
+                          </View>
+                        );
+                      }
+                    })()
+                  )}
+                </View>
+              )}
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>KETERANGAN</Text>
+                <Text style={{ fontSize: 12, color: BLUE_DARK, fontWeight: '700', flex: 1, textAlign: 'right', marginLeft: 15 }} numberOfLines={2}>
+                  {selectedTransaction?.message}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>WAKTU</Text>
+                <Text style={{ fontSize: 12, color: BLUE_DARK, fontWeight: '700' }}>
+                  {selectedTransaction?.created_at ? new Date(selectedTransaction?.created_at.replace(' ', 'T')).toLocaleString('id-ID') : '-'}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 12, marginTop: 4 }}>
+                <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: 'bold' }}>REF ID</Text>
+                <Text style={{ fontSize: 12, color: BLUE_PRIMARY, fontWeight: '800', fontFamily: 'monospace' }}>
+                  #TX-SISWA-{selectedTransaction?.id || '0000'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowDetailModal(false)}>
+              <Text style={styles.closeBtnText}>Selesai</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -298,7 +555,7 @@ const styles = StyleSheet.create({
   userName: { fontSize: 18, fontWeight: 'bold', color: WHITE },
   schoolName: { fontSize: 11, color: GOLD, fontWeight: '700', marginTop: 2 },
   logoutBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  
+
   walletCard: { backgroundColor: WHITE, borderRadius: 28, padding: 22, elevation: 15, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15, marginBottom: 30 },
   walletInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   walletLabel: { fontSize: 11, color: '#94A3B8', fontWeight: '800', textTransform: 'uppercase' },
@@ -362,5 +619,52 @@ const styles = StyleSheet.create({
   infoName: { fontSize: 18, fontWeight: 'bold', color: BLUE_DARK },
   infoNis: { fontSize: 13, color: '#94A3B8', marginTop: 4, fontWeight: '600' },
   closeBtn: { backgroundColor: BLUE_PRIMARY, width: '100%', height: 55, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  closeBtnText: { color: WHITE, fontSize: 16, fontWeight: 'bold' }
+  closeBtnText: { color: WHITE, fontSize: 16, fontWeight: 'bold' },
+  canteenCardItem: {
+    backgroundColor: WHITE,
+    borderRadius: 20,
+    width: 160,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  canteenItemImg: {
+    width: '100%',
+    height: 100,
+    backgroundColor: '#E2E8F0',
+  },
+  canteenItemInfo: {
+    padding: 12,
+  },
+  canteenItemName: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: BLUE_DARK,
+  },
+  canteenItemOwner: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  emptyCanteens: {
+    backgroundColor: WHITE,
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  emptyCanteensText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '600',
+    marginTop: 6,
+  }
 });

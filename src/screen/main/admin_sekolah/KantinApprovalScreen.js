@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import apiClient from '../../../api/client';
+import apiClient, { IMAGE_BASE_URL } from '../../../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BLUE_PRIMARY = '#1C2C5B';
@@ -170,7 +170,7 @@ export default function KantinApprovalScreen({ navigation }) {
                 <Text style={styles.sectionLabel}>Foto Bangunan/Kantin</Text>
                 {selectedKantin.foto_kantin ? (
                   <Image 
-                    source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedKantin.foto_kantin}` }} 
+                    source={{ uri: `${IMAGE_BASE_URL}${selectedKantin.foto_kantin}` }} 
                     style={styles.previewImg} 
                     resizeMode="cover"
                   />
@@ -181,7 +181,7 @@ export default function KantinApprovalScreen({ navigation }) {
                 <Text style={styles.sectionLabel}>Foto Daftar Menu</Text>
                 {selectedKantin.foto_menu ? (
                   <Image 
-                    source={{ uri: `http://192.168.1.9/project_lavirameal/${selectedKantin.foto_menu}` }} 
+                    source={{ uri: `${IMAGE_BASE_URL}${selectedKantin.foto_menu}` }} 
                     style={styles.previewImg} 
                     resizeMode="cover"
                   />
